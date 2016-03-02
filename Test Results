@@ -1,0 +1,75 @@
+//Results
+Dataset 100:
+GMM learned parameters:
+GMM(covariance_type='diag', init_params='wmc', min_covar=0.001,
+  n_components=2, n_init=1, n_iter=100, params='wmc', random_state=None,
+  thresh=None, tol=0.001, verbose=0)
+
+fp.gdash.weights_
+  array([ 0.50004049,  0.49995951])
+fp.gdash.weights_
+  array([ 0.50004049,  0.49995951])
+fp.gdash.means_
+  array([[ 0.00409305],
+         [ 0.16450244]])
+fp.gdash.covars_
+  array([[ 0.00102464],
+         [ 0.00111567]])
+fp.gdash.converged_
+  True
+
+Dataset: 500
+incorrectly predicted Labels: 0
+
+Dataset: 999
+incorrectly predicted Labels: 1
+fp.gdash
+GMM(covariance_type='diag', init_params='wmc', min_covar=0.001,
+  n_components=2, n_init=1, n_iter=100, params='wmc', random_state=None,
+  thresh=None, tol=0.001, verbose=0)
+fp.gdash.weights_
+array([ 0.4999875,  0.5000125])
+fp.gdash.means_
+array([[ 0.00992006],
+       [ 0.01005819]])
+fp.gdash.covars_
+array([[ 0.0010928 ],
+       [ 0.00109282]])
+fp.gdash.converged_
+True
+
+
+Dataset: 1000
+incorrectly predicted Labels: 0
+
+fp.gdash
+GMM(covariance_type='diag', init_params='wmc', min_covar=0.001,
+  n_components=2, n_init=1, n_iter=100, params='wmc', random_state=None,
+  thresh=None, tol=0.001, verbose=0)
+fp.gdash.weights_
+array([ 0.50003281,  0.49996719])
+fp.gdash.means_
+array([[ 0.0099099 ],
+       [ 0.01004802]])
+fp.gdash.covars_
+array([[ 0.00109279],
+       [ 0.00109282]])
+fp.gdash.converged_
+True
+
+Dataset: 5013
+incorrectly predicted Labels: 2507
+fp.gdash
+GMM(covariance_type='diag', init_params='wmc', min_covar=0.001,
+  n_components=2, n_init=1, n_iter=100, params='wmc', random_state=None,
+  thresh=None, tol=0.001, verbose=0)
+fp.gdash.weights_
+array([ 0.49999969,  0.50000031])
+fp.gdash.means_
+array([[ 0.00202351],
+       [ 0.00202357]])
+fp.gdash.covars_
+array([[ 0.00100382],
+       [ 0.00100382]])
+fp.gdash.converged_
+True

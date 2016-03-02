@@ -8,6 +8,7 @@ import sklearn.metrics.pairwise as pairwise
 import sklearn.mixture as mixture
 
 class FergusPropagation(BaseEstimator, ClassifierMixin):
+    global X_, kernel, gamma
     '''
     The Fergus et al 2009 eigenfunction propagation classifier.
 
@@ -53,6 +54,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         self.n_neighbors = n_neighbors
         self.lagrangian = lagrangian
         self.img_dims = img_dims
+
     def fit(self, X, y):
         '''
         Fit a semi-supervised eigenfunction label propagation model.
@@ -78,6 +80,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         W = self._get_kernel(self.X_)
         L = self._normalized_graph_laplacian(W)
         # Perform the eigen-decomposition.
+        self.lap = L
         vals = None
         vects = None
         classes = np.sort(np.unique(y))
@@ -90,6 +93,8 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         else:
             M = L.shape[0]
             vals, vects = LA.eigh(L, eigvals = (M - self.k, M - 1))
+        self.evals = vals
+        self.evects = vects
         self.u_ = vals
         # Construct some matrices.
         # U: k eigenvectors corresponding to smallest eigenvalues. (n_samples by k)
@@ -104,10 +109,13 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         A = S + np.dot(np.dot(self.U_.T, V), self.U_)
         b = np.dot(np.dot(self.U_.T, V), y)
         alpha = LA.solve(A, b)
+        self.al = alpha
         f = np.dot(self.U_, alpha)
+        self.func = f
         f = f.reshape((f.shape[0],-1))
         # Set up a GMM to assign the hard labels from the eigenfunctions.
         g = mixture.GMM(n_components = np.size(classes))
+        self.gdash = g
         g.fit(f)
         self.labels_ = g.predict(f)
         means = np.argsort(g.means_.flatten())
@@ -115,39 +123,36 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
             self.labels_[i] = np.where(means == self.labels_[i])[0][0]
         # Done!
         return self
-	def predict(self, X):
-		'''
-        Performs inductive inference across the model.
+    '''
+    def predict(self, X):
 
+        Performs inductive inference across the model.
         Parameters
         ----------
         X : array_like, shape = [n_samples, n_features]
-
         Returns
         -------
         y : array_like, shape = [n_samples]
             Predictions for input data
-        '''
+
         probas = self.predict_proba(X)
         return self.labels_[np.argmax(probas, axis=1)].ravel()
-	def predict_proba(self, X):
-		'''
-        Predict probability for each possible outcome.
 
+    def predict_proba(self, X):
+
+        Predict probability for each possible outcome.
         Compute the probability estimates for each single sample in X
         and each possible outcome seen during training (categorical
         distribution).
-
         Parameters
         ----------
         X : array_like, shape = [n_samples, n_features]
-
         Returns
         -------
         probabilities : array, shape = [n_samples, n_classes]
             Normalized probability distributions across
             class labels
-        '''
+
         X_2d = None
         if scipy.sparse.isspmatrix(X):
             X_2d = X
@@ -166,6 +171,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         normalizer = np.atleast_2d(np.sum(probabilities, axis=1)).T
         probabilities /= normalizer
         return probabilities
+    '''
     def _get_kernel(self, X, y = None):
         if self.kernel == "rbf":
             if y is None:
@@ -185,6 +191,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         else:
             raise ValueError("%s is not a valid kernel. Only rbf and knn"
                              " are supported at this time" % self.kernel)
+
     def _img_rbf_kernel(self, X):
         A = np.diag(np.ones(X.shape[0]))
         index = 0
@@ -240,6 +247,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
                     A[other, index] = rbf
                 index += 1
         return scipy.sparse.csc_matrix(A)
+
     def _normalized_graph_laplacian(self, A):
         '''
         Calculates the normalized graph laplacian, as the sklearn utility
