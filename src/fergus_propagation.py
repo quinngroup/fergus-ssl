@@ -4,6 +4,7 @@ import scipy.sparse
 import sklearn.utils.arpack as SLA
 from sklearn.base import ClassifierMixin
 from sklearn.base import BaseEstimator
+from sklearn.manifold import spectral_embedding
 import sklearn.metrics.pairwise as pairwise
 import sklearn.mixture as mixture
 
@@ -78,9 +79,10 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         self.X_ = X
         # Construct the graph laplacian from the graph matrix.
         W = self._get_kernel(self.X_)
-        L = self._normalized_graph_laplacian(W)
+        self.w = W
+        D = np.diag(np.sum(W,axis=(1)))
+        L = self._unnormalized_graph_laplacian(D, W)
         # Perform the eigen-decomposition.
-        self.lap = L
         vals = None
         vects = None
         classes = np.sort(np.unique(y))
@@ -88,13 +90,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
             classes = np.delete(classes, 0) # remove the -1 from this list
             if self.k == -1:
                 self.k = np.size(classes)
-        if scipy.sparse.isspmatrix(L):
-            vals, vects = SLA.eigsh(L, k = self.k, which = 'LM', maxiter = 1000)
-        else:
-            M = L.shape[0]
-            vals, vects = LA.eigh(L, eigvals = (M - self.k, M - 1))
-        self.evals = vals
-        self.evects = vects
+        vals, vects = scipy.sparse.linalg.eigsh(L,k=self.k,M=D,sigma=0,which='LM')
         self.u_ = vals
         # Construct some matrices.
         # U: k eigenvectors corresponding to smallest eigenvalues. (n_samples by k)
@@ -123,55 +119,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
             self.labels_[i] = np.where(means == self.labels_[i])[0][0]
         # Done!
         return self
-    '''
-    def predict(self, X):
 
-        Performs inductive inference across the model.
-        Parameters
-        ----------
-        X : array_like, shape = [n_samples, n_features]
-        Returns
-        -------
-        y : array_like, shape = [n_samples]
-            Predictions for input data
-
-        probas = self.predict_proba(X)
-        return self.labels_[np.argmax(probas, axis=1)].ravel()
-
-    def predict_proba(self, X):
-
-        Predict probability for each possible outcome.
-        Compute the probability estimates for each single sample in X
-        and each possible outcome seen during training (categorical
-        distribution).
-        Parameters
-        ----------
-        X : array_like, shape = [n_samples, n_features]
-        Returns
-        -------
-        probabilities : array, shape = [n_samples, n_classes]
-            Normalized probability distributions across
-            class labels
-
-        X_2d = None
-        if scipy.sparse.isspmatrix(X):
-            X_2d = X
-        else:
-            X_2d = np.atleast_2d(X)
-        weight_matrices = self._get_kernel(self.X_, X_2d)
-        if self.kernel == 'knn':
-            probabilities = []
-            for weight_matrix in weight_matrices:
-                ine = np.sum(self.label_distributions_[weight_matrix], axis=0)
-                probabilities.append(ine)
-            probabilities = np.array(probabilities)
-        else:
-            weight_matrices = weight_matrices.T
-            probabilities = np.dot(weight_matrices, self.label_distributions_)
-        normalizer = np.atleast_2d(np.sum(probabilities, axis=1)).T
-        probabilities /= normalizer
-        return probabilities
-    '''
     def _get_kernel(self, X, y = None):
         if self.kernel == "rbf":
             if y is None:
@@ -248,38 +196,25 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
                 index += 1
         return scipy.sparse.csc_matrix(A)
 
-    def _normalized_graph_laplacian(self, A):
+    def _unnormalized_graph_laplacian(self, A, B):
         '''
-        Calculates the normalized graph laplacian, as the sklearn utility
-        graph_laplacian(normed = True) does not seem to do this.
+        Calculates the unnormalized graph laplacian L=D-W
 
         Parameters
         ----------
         A : array, shape (n, n)
+            diagonal matrix.
+
+        B : array, shape (n, n)
             Symmetric affinity matrix.
 
         Returns
         -------
         L : array, shape (n, n)
-            Normalized graph laplacian.
+            Unnormalized graph laplacian.
         '''
         L = None
-        if scipy.sparse.isspmatrix(A):
-            # SKLEARN
-            n_nodes = A.shape[0]
-            if not A.format == 'coo':
-                L = A.tocoo()
-            else:
-                L = A.copy()
-            w = np.sqrt(np.asarray(L.sum(axis = 0)).squeeze())
-            L.data /= w[L.row]
-            L.data /= w[L.col]
-        else:
-            L = A.copy()
-            d = np.sqrt(L.sum(axis = 0))
-            L /= d
-            L /= d[:, np.newaxis]
-            # The last line effectively transposes the vector d, swapping
-            # the rows and columns of the division operation. Pretty clever,
-            # scikit-learn!
+
+        L = A - B
+
         return L
