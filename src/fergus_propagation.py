@@ -90,6 +90,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
             classes = np.delete(classes, 0) # remove the -1 from this list
             if self.k == -1:
                 self.k = np.size(classes)
+        #Creating generalized eigenvectors and eigenvalues.
         vals, vects = scipy.sparse.linalg.eigsh(L,k=self.k,M=D,sigma=0,which='LM')
         self.u_ = vals
         # Construct some matrices.
