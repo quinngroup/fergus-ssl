@@ -9,7 +9,6 @@ import sklearn.metrics.pairwise as pairwise
 import sklearn.mixture as mixture
 
 class FergusPropagation(BaseEstimator, ClassifierMixin):
-    global X_, kernel, gamma
     '''
     The Fergus et al 2009 eigenfunction propagation classifier.
 
@@ -127,75 +126,9 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
                 return pairwise.rbf_kernel(X, X, gamma = self.gamma)
             else:
                 return pairwise.rbf_kernel(X, y, gamma = self.gamma)
-        elif self.kernel == "img":
-            return self._img_rbf_kernel(X)
-        elif self.kernel == "knn":
-            if self.nn_fit is None:
-                self.nn_fit = NearestNeighbors(self.n_neighbors).fit(X)
-            if y is None:
-                return self.nn_fit.kneighbors_graph(self.nn_fit._fit_X,
-                        self.n_neighbors, mode = 'connectivity')
-            else:
-                return self.nn_fit.kneighbors(y, return_distance = False)
         else:
             raise ValueError("%s is not a valid kernel. Only rbf and knn"
                              " are supported at this time" % self.kernel)
-
-    def _img_rbf_kernel(self, X):
-        A = np.diag(np.ones(X.shape[0]))
-        index = 0
-        for i in range(0, self.img_dims[1]):
-            for j in range(0, self.img_dims[0]):
-                if i - 1 >= 0:
-                    # Directly above.
-                    other = index - self.img_dims[0]
-                    rbf = pairwise.rbf_kernel(X[index], X[other], gamma = self.gamma)
-                    A[index, other] = rbf
-                    A[other, index] = rbf
-                if i + 1 < self.img_dims[1]:
-                    # Directly below.
-                    other = index + self.img_dims[0]
-                    rbf = pairwise.rbf_kernel(X[index], X[other], gamma = self.gamma)
-                    A[index, other] = rbf
-                    A[other, index] = rbf
-                if j - 1 >= 0:
-                    # Directly to the left.
-                    other = index - 1
-                    rbf = pairwise.rbf_kernel(X[index], X[other], gamma = self.gamma)
-                    A[index, other] = rbf
-                    A[other, index] = rbf
-                if j + 1 < self.img_dims[0]:
-                    # Directly to the right.
-                    other = index + 1
-                    rbf = pairwise.rbf_kernel(X[index], X[other], gamma = self.gamma)
-                    A[index, other] = rbf
-                    A[other, index] = rbf
-                if i - 1 >= 0 and j - 1 >= 0:
-                    # Upper left corner.
-                    other = index - self.img_dims[0] - 1
-                    rbf = pairwise.rbf_kernel(X[index], X[other], gamma = self.gamma)
-                    A[index, other] = rbf
-                    A[other, index] = rbf
-                if i - 1 >= 0 and j + 1 < self.img_dims[0]:
-                    # Upper right corner.
-                    other = index - self.img_dims[0] + 1
-                    rbf = pairwise.rbf_kernel(X[index], X[other], gamma = self.gamma)
-                    A[index, other] = rbf
-                    A[other, index] = rbf
-                if i + 1 < self.img_dims[1] and j - 1 >= 0:
-                    # Lower left corner.
-                    other = index + self.img_dims[0] - 1
-                    rbf = pairwise.rbf_kernel(X[index], X[other], gamma = self.gamma)
-                    A[index, other] = rbf
-                    A[other, index] = rbf
-                if i + 1 < self.img_dims[1] and j + 1 < self.img_dims[0]:
-                    # Lower right corner.
-                    other = index + self.img_dims[0] + 1
-                    rbf = pairwise.rbf_kernel(X[index], X[other], gamma = self.gamma)
-                    A[index, other] = rbf
-                    A[other, index] = rbf
-                index += 1
-        return scipy.sparse.csc_matrix(A)
 
     def _unnormalized_graph_laplacian(self, A, B):
         '''
