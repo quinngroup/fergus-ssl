@@ -7,6 +7,7 @@ from sklearn.base import BaseEstimator
 from sklearn.manifold import spectral_embedding
 import sklearn.metrics.pairwise as pairwise
 import sklearn.mixture as mixture
+import sys
 
 class FergusPropagation(BaseEstimator, ClassifierMixin):
     '''
@@ -45,7 +46,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
     Gigantic Image Collections (2009).
     http://eprints.pascal-network.org/archive/00005636/01/ssl-1.pdf
     '''
-    def __init__(self, kernel = 'rbf', k = -1, gamma = 0.005, n_neighbors = 7, lagrangian = 10, img_dims = (-1, -1)):
+    def __init__(self, kernel = 'rbf', k = -1, gamma = float(sys.argv[0]), n_neighbors = 7, lagrangian = 10, img_dims = (-1, -1)):
         # This doesn't iterate at all, so the parameters are very different
         # from the BaseLabelPropagation parameters.
         self.kernel = kernel

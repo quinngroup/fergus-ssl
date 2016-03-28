@@ -1,0 +1,90 @@
+Results for blob size 1000 and standard deviation 2.5
+Runtime: 5.52502703667
+Gamma is 0.005
+blob variance is 2.5
+data size is1000
+Results for blob size 1000 and standard deviation 3.5
+Runtime: 5.49625706673
+Gamma is 0.005
+blob variance is 3.5
+data size is1000
+Results for blob size 1000 and standard deviation 4.5
+Runtime: 5.54943203926
+Gamma is 0.005
+blob variance is 4.5
+data size is1000
+Results for blob size 1000 and standard deviation 2.5
+Runtime: 5.46840000153
+Gamma is 0.01
+blob variance is 2.5
+data size is1000
+Results for blob size 1000 and standard deviation 3.5
+Runtime: 5.53184390068
+Gamma is 0.01
+blob variance is 3.5
+data size is1000
+Results for blob size 1000 and standard deviation 4.5
+Runtime: 5.49895501137
+Gamma is 0.01
+blob variance is 4.5
+data size is1000
+Results for blob size 1000 and standard deviation 2.5
+Runtime: 5.60178112984
+Gamma is 0.1
+blob variance is 2.5
+data size is1000
+Results for blob size 1000 and standard deviation 3.5
+Runtime: 7.07446193695
+Gamma is 0.1
+blob variance is 3.5
+data size is1000
+Results for blob size 1000 and standard deviation 4.5
+Runtime: 7.10652589798
+Gamma is 0.1
+blob variance is 4.5
+data size is1000
+Results for blob size 500 and standard deviation 2.5
+Runtime: 0.663341999054
+Gamma is 0.005
+blob variance is 2.5
+data size is500
+Results for blob size 500 and standard deviation 3.5
+Runtime: 0.673602104187
+Gamma is 0.005
+blob variance is 3.5
+data size is500
+Results for blob size 500 and standard deviation 4.5
+Runtime: 0.762353181839
+Gamma is 0.005
+blob variance is 4.5
+data size is500
+Results for blob size 500 and standard deviation 2.5
+Runtime: 0.661572933197
+Gamma is 0.01
+blob variance is 2.5
+data size is500
+Results for blob size 500 and standard deviation 3.5
+Runtime: 0.664126157761
+Gamma is 0.01
+blob variance is 3.5
+data size is500
+Results for blob size 500 and standard deviation 4.5
+Runtime: 0.661337852478
+Gamma is 0.01
+blob variance is 4.5
+data size is500
+Results for blob size 500 and standard deviation 2.5
+Runtime: 0.711285114288
+Gamma is 0.1
+blob variance is 2.5
+data size is500
+Results for blob size 500 and standard deviation 3.5
+Runtime: 0.962213993073
+Gamma is 0.1
+blob variance is 3.5
+data size is500
+Results for blob size 500 and standard deviation 4.5
+Runtime: 0.828257799149
+Gamma is 0.1
+blob variance is 4.5
+data size is500

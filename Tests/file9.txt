@@ -1,0 +1,5 @@
+Results for blob size 1000 and standard deviation 4.5
+Runtime: 7.10652589798
+Gamma is 0.1
+blob variance is 4.5
+data size is1000

@@ -27,6 +27,10 @@ newY1[point2[0][0]] = Y1[point2[0][0]]
 execfile('/home/madhura/Computational_Olfaction/fergus-ssl/src/fergus_propagation.py')
 fp = FergusPropagation()
 fp.fit(X1,newY1)
+plt.scatter(X1[:, 0], X1[:, 1], marker='o', c=Y1, cmap = ('Paired'))
+plt.show()
+plt.scatter(X1[:, 0], X1[:, 1], marker='o', c=fp.labels_, cmap = ('Paired'))
+plt.show()
 oldLabels = np.copy(Y1)
 newLabels = np.copy(fp.labels_)
 #plotting eigenvectors
@@ -71,9 +75,9 @@ print 'incorrect labels: ' + repr(diff)
 error =  (float)(diff/(oldLabels.size))
 print 'error is ' + repr(error)
 print error
-//Test case 2
+#Test case 2
 newY1 = np.copy(Y1)
-//label 4=0 and label 99=1
+#label 4=0 and label 99=1
 for y in range(0,len(newY1)):
     newY1[y]=-1
 
@@ -86,5 +90,5 @@ oldLabels = np.copy(Y1)
 newLabels = np.copy(fp.labels_)
 diff = np.setdiff1d(oldLabels,newLabels)
 error = 1-(diff.shape[0]/oldLabels.shape[0])
-//Testcase 3
+#Testcase 3
 X1,Y1=datasets.make_moons(100000,True,None,None)

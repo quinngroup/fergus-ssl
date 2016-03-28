@@ -1,0 +1,21 @@
+#!/bin/bash
+# performance testing
+python analysis.py 2.5 1000 0.005 > file1.txt
+python analysis.py 3.5 1000 0.005 > file2.txt
+python analysis.py 4.5 1000 0.005 > file3.txt
+python analysis.py 2.5 1000 0.01 > file4.txt
+python analysis.py 3.5 1000 0.01 > file5.txt
+python analysis.py 4.5 1000 0.01 > file6.txt
+python analysis.py 2.5 1000 0.1 > file7.txt
+python analysis.py 3.5 1000 0.1 > file8.txt
+python analysis.py 4.5 1000 0.1 > file9.txt
+python analysis.py 2.5 500 0.005 > file10.txt
+python analysis.py 3.5 500 0.005 > file11.txt
+python analysis.py 4.5 500 0.005 > file12.txt
+python analysis.py 2.5 500 0.01 > file13.txt
+python analysis.py 3.5 500 0.01 > file14.txt
+python analysis.py 4.5 500 0.01 > file15.txt
+python analysis.py 2.5 500 0.1 > file16.txt
+python analysis.py 3.5 500 0.1 > file17.txt
+python analysis.py 4.5 500 0.1 > file18.txt
+cat file1.txt file2.txt file3.txt file4.txt file5.txt file6.txt file7.txt file8.txt file9.txt file10.txt file11.txt file12.txt file13.txt file14.txt file15.txt file16.txt file17.txt file18.txt > /home/madhura/Computational_Olfaction/fergus-ssl/Results/FinalStats.txt
