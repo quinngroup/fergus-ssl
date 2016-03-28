@@ -45,7 +45,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
     Gigantic Image Collections (2009).
     http://eprints.pascal-network.org/archive/00005636/01/ssl-1.pdf
     '''
-    def __init__(self, kernel = 'rbf', k = -1, gamma = 20, n_neighbors = 7, lagrangian = 10, img_dims = (-1, -1)):
+    def __init__(self, kernel = 'rbf', k = -1, gamma = 0.005, n_neighbors = 7, lagrangian = 10, img_dims = (-1, -1)):
         # This doesn't iterate at all, so the parameters are very different
         # from the BaseLabelPropagation parameters.
         self.kernel = kernel
@@ -78,9 +78,9 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         self.X_ = X
         # Construct the graph laplacian from the graph matrix.
         W = self._get_kernel(self.X_)
-        self.w = W
         D = np.diag(np.sum(W,axis=(1)))
         L = self._unnormalized_graph_laplacian(D, W)
+        #L = W
         # Perform the eigen-decomposition.
         vals = None
         vects = None
@@ -90,14 +90,15 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
             if self.k == -1:
                 self.k = np.size(classes)
         #Creating generalized eigenvectors and eigenvalues.
-        vals, vects = scipy.sparse.linalg.eigsh(L,k=self.k,M=D,sigma=0,which='LM')
-        self.u_ = vals
+        vals, vects = scipy.linalg.eig(L,D)
+        self.u_ = np.real(vals)
         # Construct some matrices.
         # U: k eigenvectors corresponding to smallest eigenvalues. (n_samples by k)
         # S: Diagonal matrix of k smallest eigenvalues. (k by k)
         # V: Diagonal matrix of LaGrange multipliers for labeled data, 0 for unlabeled. (n_samples by n_samples)
-        self.U_ = np.real(vects)
-        S = np.diag(self.u_)
+        self.vec = np.real(vects)
+        self.U_ = np.real(vects[:,:fp.k])
+        S = np.diag(self.u_[:fp.k])
         V = np.diag(np.zeros(np.size(y)))
         labeled = np.where(y != -1)
         V[labeled, labeled] = self.lagrangian
@@ -107,12 +108,14 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         alpha = LA.solve(A, b)
         self.al = alpha
         f = np.dot(self.U_, alpha)
-        self.func = f
         f = f.reshape((f.shape[0],-1))
+        self.func = f
         # Set up a GMM to assign the hard labels from the eigenfunctions.
         g = mixture.GMM(n_components = np.size(classes))
         self.gdash = g
         g.fit(f)
+        #secondEig = self.U_[:,1].reshape((self.U_.shape[0],-1))
+        #g.fit(secondEig)
         self.labels_ = g.predict(f)
         means = np.argsort(g.means_.flatten())
         for i in range(0, np.size(self.labels_)):

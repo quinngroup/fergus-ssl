@@ -1,16 +1,17 @@
-//testing
-//get the moons dataset
-//plot the data
-//Test classes
-//1. Pick 2 data points keep them labelled
-//2. randomly assign 2 data points and keep them labelled
-//3. vary data sizes
-//4. check ground truth predicted correctly
-//5. vary hyper parameters
+#testing
+#get the moons dataset
+#plot the data
+#Test classes
+#1. Pick 2 data points keep them labelled
+#2. randomly assign 2 data points and keep them labelled
+#3. vary data sizes
+#4. check ground truth predicted correctly
+#5. vary hyper parameters
 import numpy as np
 from sklearn import datasets
 import matplotlib.pyplot as plt
-X1,Y1=datasets.make_moons(100,True,None,None)
+X1,Y1=datasets.make_blobs(n_samples=1000, n_features=2, centers=2, cluster_std=4.5, center_box=(-10.0, 10.0), shuffle=True, random_state=None)
+#X1,Y1=datasets.make_moons(999,True,None,None)
 plt.scatter(X1[:, 0], X1[:, 1], marker='o', c=Y1, cmap = ('Paired'))
 plt.show()
 newX1 = np.around(X1,decimals=2)
@@ -23,20 +24,20 @@ for y in range(0,len(newY1)):
 
 newY1[point1[0][0]] = Y1[point1[0][0]]
 newY1[point2[0][0]] = Y1[point2[0][0]]
-execfile('/home/madhura/Computational_Olfaction/fergus-ssl/fergus_propagation.py')
+execfile('/home/madhura/Computational_Olfaction/fergus-ssl/src/fergus_propagation.py')
 fp = FergusPropagation()
 fp.fit(X1,newY1)
 oldLabels = np.copy(Y1)
 newLabels = np.copy(fp.labels_)
-//plotting eigenvectors
+#plotting eigenvectors
 plt.plot(range(1,len(fp.evects)+1),fp.evects[:,0], c='yellow', label='Eigenvector1')
 plt.plot(range(1,len(fp.evects)+1),fp.evects[:,1], c='gray', label='Eigenvector2')
-//plotting eigenvalues
+#plotting eigenvalues
 plt.plot(1,fp.evals[0], c='yellow', label='Eigenvalue1',marker='o')
 plt.plot(2,fp.evals[1], c='gray', label='Eigenvalue2',marker='o')
 
-//Data plot
-plt.scatter(X1[:, 0], X1[:, 1], marker='o', c=fp.labels_, cmap = ('Paired'))
+#Data plot
+    plt.scatter(X1[:, 0], X1[:, 1], marker='o', c=fp.labels_, cmap = ('Paired'))
 
 mu = X1.mean(axis=0)
 sigma = X1.std(axis=0).mean()
