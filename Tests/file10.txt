@@ -1,5 +1,6 @@
+Number of incorrectly clustered points:15
 Results for blob size 500 and standard deviation 2.5
-Runtime: 0.663341999054
+Runtime: 0.653392076492
 Gamma is 0.005
 blob variance is 2.5
 data size is500

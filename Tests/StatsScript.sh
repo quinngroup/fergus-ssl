@@ -19,3 +19,4 @@ python analysis.py 2.5 500 0.1 > file16.txt
 python analysis.py 3.5 500 0.1 > file17.txt
 python analysis.py 4.5 500 0.1 > file18.txt
 cat file1.txt file2.txt file3.txt file4.txt file5.txt file6.txt file7.txt file8.txt file9.txt file10.txt file11.txt file12.txt file13.txt file14.txt file15.txt file16.txt file17.txt file18.txt > /home/madhura/Computational_Olfaction/fergus-ssl/Results/FinalStats.txt
+#cat file1.txt file2.txt file3.txt file4.txt file5.txt file6.txt file7.txt file8.txt file9.txt >/home/madhura/Computational_Olfaction/fergus-ssl/Results/FinalStats.txt
