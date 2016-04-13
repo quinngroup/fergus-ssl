@@ -30,7 +30,9 @@ for y in range(0,len(newY1)):
 newY1[point1] = Y1[point1]
 newY1[point2] = Y1[point2]
 sys.argv=[gamma]
-execfile('/home/madhura/Computational_Olfaction/fergus-ssl/src/fergus_propagation.py')
+with open('/home/madhura/Computational_Olfaction/fergus-ssl/src/fergus_propagation.py') as source_file:
+    exec(source_file.read())
+#execfile('/home/madhura/Computational_Olfaction/fergus-ssl/src/fergus_propagation.py')
 fp = FergusPropagation()
 start = timeit.default_timer()
 fp.fit(X1,newY1)

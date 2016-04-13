@@ -17,8 +17,8 @@ plt.show()
 newX1 = np.around(X1,decimals=2)
 newY1=np.copy(Y1)
 '''Test case 1 '''
-point1 = np.where((newX1==(1.,0.)).all(axis=1))
-point2 = np.where((newX1==(0.13,0.01)).all(axis=1))
+point1 = np.where(Y1==(0))[0][0]
+point2 = np.where(Y1==(1))[0][0]
 for y in range(0,len(newY1)):
     newY1[y]=-1
 

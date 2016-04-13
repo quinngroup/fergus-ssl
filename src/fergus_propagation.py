@@ -6,6 +6,7 @@ from sklearn.base import ClassifierMixin
 from sklearn.base import BaseEstimator
 from sklearn.manifold import spectral_embedding
 import sklearn.metrics.pairwise as pairwise
+from sklearn import decomposition as pca
 import sklearn.mixture as mixture
 import sys
 
@@ -46,7 +47,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
     Gigantic Image Collections (2009).
     http://eprints.pascal-network.org/archive/00005636/01/ssl-1.pdf
     '''
-    def __init__(self, kernel = 'rbf', k = -1, gamma = float(sys.argv[0]), n_neighbors = 7, lagrangian = 10, img_dims = (-1, -1)):
+    def __init__(self, kernel = 'rbf', k = -1, gamma = 0.1, n_neighbors = 7, lagrangian = 10, img_dims = (-1, -1)):
         # This doesn't iterate at all, so the parameters are very different
         # from the BaseLabelPropagation parameters.
         self.kernel = kernel
@@ -55,6 +56,42 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         self.n_neighbors = n_neighbors
         self.lagrangian = lagrangian
         self.img_dims = img_dims
+
+    def eigFunc(self,X,y):
+        self.X_ = X
+        numBins = 10
+        kernelPcaModel = pca.KernelPCA(n_components=self.k,kernel='linear')
+        rotatedData = kernelPcaModel.fit_transform(self.X_)
+        sz = self.X_[:,0].size
+        '''
+        sig = an array to save the k smallest eigenvalues that we get for every p(s)
+        g   = a 2d column array to save the k smallest eigenfunctions that we get for every p(s)
+        '''
+        sig = np.empty(self.k)
+        g = np.empty((numBins,self.k))
+        for i in range(self.k):
+            histograms,binEdges = np.histogram(rotatedData[:,i],bins=numBins,density=True)
+            histograms = histograms+1
+            #get D~, P, W~
+            '''
+            Wdis = Affinity between discrete points.
+                 Since Affinity matrix will be build on one histogram at a time. I am using pairwise linear- kernel affinities
+            P  = Diagonal matrix of histograms
+            Ddis = Diagonal matrix whose diagonal elements are the sum of the columns of PW~P
+            Dhat = Diagonal matrix whose diagonal elements are the sum of columns of PW~
+            '''
+            kernel = "linear"
+            Wdis = self._get_kernel(histograms.reshape(histograms.shape[0],1),y=None,ker="linear")
+            P  = np.diag(histograms)
+            print("Wdis:" + repr(Wdis.shape) + " P: "+ repr(P.shape))
+            Ddis = np.diag(np.sum((P.dot(Wdis.dot(P))),axis=0))
+            Dhat = np.diag(np.sum(P.dot(Wdis),axis=0))
+            #Creating generalized eigenfunctions and eigenvalues from histograms.
+            sigmaVals, functions = scipy.linalg.eig((Ddis-(P.dot(Wdis.dot(P)))),(P.dot(Dhat)))
+            #get the smallest
+            sig[i] = sigmaVals[0]
+            g[:,i] = functions[:,0]
+            return (sig,g)
 
     def fit(self, X, y):
         '''
@@ -78,7 +115,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         '''
         self.X_ = X
         # Construct the graph laplacian from the graph matrix.
-        W = self._get_kernel(self.X_)
+        W = self._get_kernel(self.X_,y=None, ker=self.kernel)
         D = np.diag(np.sum(W,axis=(1)))
         L = self._unnormalized_graph_laplacian(D, W)
         #L = W
@@ -124,12 +161,19 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         # Done!
         return self
 
-    def _get_kernel(self, X, y = None):
-        if self.kernel == "rbf":
+    def _get_kernel(self, X, y = None,ker=None):
+        print(ker)
+        if ker == "rbf":
             if y is None:
                 return pairwise.rbf_kernel(X, X, gamma = self.gamma)
             else:
                 return pairwise.rbf_kernel(X, y, gamma = self.gamma)
+        elif ker == "linear":
+            print(ker)
+            if y is None:
+                return pairwise.euclidean_distances(X, X)
+            else:
+                return pairwise.euclidean_distances(X, y)
         else:
             raise ValueError("%s is not a valid kernel. Only rbf and knn"
                              " are supported at this time" % self.kernel)
