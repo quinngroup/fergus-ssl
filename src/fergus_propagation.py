@@ -69,13 +69,15 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         '''
         sig = np.empty(self.k)
         g = np.empty((numBins,self.k))
+        #sig=np.array([])
+        #g=np.array([])
         for i in range(self.k):
             histograms,binEdges = np.histogram(rotatedData[:,i],bins=numBins,density=True)
             histograms = histograms+1
             #get D~, P, W~
             '''
             Wdis = Affinity between discrete points.
-                 Since Affinity matrix will be build on one histogram at a time. I am using pairwise linear- kernel affinities
+            Since Affinity matrix will be build on one histogram at a time. I am using pairwise linear- kernel affinities
             P  = Diagonal matrix of histograms
             Ddis = Diagonal matrix whose diagonal elements are the sum of the columns of PW~P
             Dhat = Diagonal matrix whose diagonal elements are the sum of columns of PW~
@@ -89,9 +91,12 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
             #Creating generalized eigenfunctions and eigenvalues from histograms.
             sigmaVals, functions = scipy.linalg.eig((Ddis-(P.dot(Wdis.dot(P)))),(P.dot(Dhat)))
             #get the smallest
-            sig[i] = sigmaVals[0]
-            g[:,i] = functions[:,0]
-            return (sig,g)
+            print("eigenValue"+repr(i)+": "+repr(np.real(sigmaVals[1]))+"Eigenfunctions"+repr(i)+": "+repr(np.real(functions[:,1])))
+            sig[i] = np.real(sigmaVals[1])
+            g[:,i] = np.real(functions[:,1])
+            #sig = np.append(sig, [np.real(sigmaVals[0])])
+            #g = np.append(g, [[np.real(functions[:,0])]])
+        return (sig,g)
 
     def fit(self, X, y):
         '''
