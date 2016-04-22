@@ -7,6 +7,7 @@ from sklearn.base import BaseEstimator
 from sklearn.manifold import spectral_embedding
 import sklearn.metrics.pairwise as pairwise
 from sklearn import decomposition as pca
+from scipy import interpolate as ip
 import sklearn.mixture as mixture
 import sys
 
@@ -47,7 +48,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
     Gigantic Image Collections (2009).
     http://eprints.pascal-network.org/archive/00005636/01/ssl-1.pdf
     '''
-    def __init__(self, kernel = 'rbf', k = -1, gamma = 0.1, n_neighbors = 7, lagrangian = 10, img_dims = (-1, -1)):
+    def __init__(self, kernel = 'rbf', k = -1, gamma = 0.1, n_neighbors = 7, lagrangian = 10, img_dims = (-1, -1), numBins = 10):
         # This doesn't iterate at all, so the parameters are very different
         # from the BaseLabelPropagation parameters.
         self.kernel = kernel
@@ -56,24 +57,39 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         self.n_neighbors = n_neighbors
         self.lagrangian = lagrangian
         self.img_dims = img_dims
+        self.numBins = numBins
 
     def eigFunc(self,X,y):
         self.X_ = X
-        numBins = 10
-        kernelPcaModel = pca.KernelPCA(n_components=self.k,kernel='linear')
-        rotatedData = kernelPcaModel.fit_transform(self.X_)
+        classes = np.sort(np.unique(y))
+        if classes[0] == -1:
+            classes = np.delete(classes, 0) # remove the -1 from this list
+            if self.k == -1:
+                self.k = np.size(classes)
+        randomizedPCA = pca.RandomizedPCA(n_components=self.k)
+        rotatedData = randomizedPCA.fit_transform(self.X_)
         sz = self.X_[:,0].size
+
         '''
         sig = an array to save the k smallest eigenvalues that we get for every p(s)
         g   = a 2d column array to save the k smallest eigenfunctions that we get for every p(s)
         '''
-        sig = np.empty(self.k)
-        g = np.empty((numBins,self.k))
+        sig = np.empty((self.k,self.k))
+        g = np.empty(((self.k,self.numBins,self.k)))
+        hist = np.empty((self.k,self.numBins))
+        b_edgeMeans = np.empty((self.k,self.numBins))
+        interpolators = []
+        approxValues = np.empty((self.k,self.X_.shape[0]))
+        transformeddata = np.empty((self.k,self.X_.shape[0]))
         #sig=np.array([])
         #g=np.array([])
         for i in range(self.k):
-            histograms,binEdges = np.histogram(rotatedData[:,i],bins=numBins,density=True)
-            histograms = histograms+1
+            histograms,binEdges = np.histogram(rotatedData[:,i],bins=self.numBins,density=True)
+            #add 0.01 to histograms and normalize it
+            histograms = histograms+ 0.01
+            histograms /= histograms.sum()
+            # calculating means on the bin edges as the x-axis for the interpolators
+            b_edgeMeans[i,:] = np.array([binEdges[j:j + 2].mean() for j in range(binEdges.shape[0] - 1)])
             #get D~, P, W~
             '''
             Wdis = Affinity between discrete points.
@@ -90,13 +106,73 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
             Dhat = np.diag(np.sum(P.dot(Wdis),axis=0))
             #Creating generalized eigenfunctions and eigenvalues from histograms.
             sigmaVals, functions = scipy.linalg.eig((Ddis-(P.dot(Wdis.dot(P)))),(P.dot(Dhat)))
-            #get the smallest
-            print("eigenValue"+repr(i)+": "+repr(np.real(sigmaVals[1]))+"Eigenfunctions"+repr(i)+": "+repr(np.real(functions[:,1])))
-            sig[i] = np.real(sigmaVals[1])
-            g[:,i] = np.real(functions[:,1])
-            #sig = np.append(sig, [np.real(sigmaVals[0])])
-            #g = np.append(g, [[np.real(functions[:,0])]])
-        return (sig,g)
+            #print("eigenValue"+repr(i)+": "+repr(np.real(sigmaVals[0:self.k]))+"Eigenfunctions"+repr(i)+": "+repr(np.real(functions[:,0:self.k])))
+            sig[i,:] = np.real(np.sort(sigmaVals)[0:self.k])
+            g[i,:,:] = np.real(np.sort(functions, axis=0)[:,0:self.k])
+            hist[i,:] = histograms
+            #interpolate in 1-D
+            interpolators.append(ip.interp1d(np.sort(b_edgeMeans[i,:]), g[i,:, 1]))
+            interp = ip.interp1d(b_edgeMeans[i,:], g[i,:, 1])
+            #First check if the original datapoints need to be scaled according to the interpolator ranges
+            if(X1[:,i].min() < b_edgeMeans[i].min() or X1[:,i].max() > b_edgeMeans[i].max()):
+                ls=[]
+                for num in X1[:,i]:
+                    ls.append(((((b_edgeMeans[i,:].max()-0.1)-b_edgeMeans[i,:].min())*(num - X1[:,i].min()))/(X1[:,i].max() - X1[:,i].min())) + b_edgeMeans[i,:].min())
+                transformeddata[i,:] = np.array(ls)
+                #transformeddata[i,:] = transformer(b_edgeMeans[i].min(), b_edgeMeans[i].max(), self.X_[:,i])
+            else:
+                print("within range")
+                transformeddata[i,:] = np.transpose(self.X_)[i,:]
+            #get approximated eigenvectors for all n points using the interpolators
+            approxValues[i,:] = interp(transformeddata[i,:])
+        # U: k eigenvectors corresponding to smallest eigenvalues. (n_samples by k)
+        # S: Diagonal matrix of k smallest eigenvalues. (k by k)
+        # V: Diagonal matrix of LaGrange multipliers for labeled data, 0 for unlabeled. (n_samples by n_samples)
+        U = np.transpose(approxValues)
+
+        S = np.diag(sig[:,1])
+        V = np.diag(np.zeros(np.size(y)))
+        labeled = np.where(y != -1)
+        V[labeled, labeled] = self.lagrangian
+        # Solve for alpha and use it to compute the eigenfunctions, f.
+        A = S + np.dot(np.dot(U.T, V), U)
+        b = np.dot(np.dot(U.T, V), y)
+        alpha = LA.solve(A, b)
+        f = np.dot(U, alpha)
+        f = f.reshape((f.shape[0],-1))
+        self.func = f
+        # Set up a GMM to assign the hard labels from the eigenfunctions.
+        g = mixture.GMM(n_components = np.size(classes))
+        self.gdash = g
+        g.fit(f)
+        #secondEig = self.U_[:,1].reshape((self.U_.shape[0],-1))
+        #g.fit(secondEig)
+        self.labels_ = g.predict(f)
+        means = np.argsort(g.means_.flatten())
+        for i in range(0, np.size(self.labels_)):
+            self.labels_[i] = np.where(means == self.labels_[i])[0][0]
+
+        return self
+        #return (sig,g,np.array(interpolators),b_edgeMeans,np.transpose(approxValues))
+
+    def transformer(fmin,fmax,data):
+        '''
+        Parameters
+        ----------
+        fmin : min boundary of the interpolator to which the data min is to be transformed to.
+
+        fmax : max boundary of the interpolator to which the data max is to be transformed to.
+
+        data : transform data points into the interpolator's boundary space
+
+        Returns
+        -------
+        newpoints : scaled datapoints for the given dimension
+        '''
+        newpoints=[]
+        for num in data:
+            newpoints.append(((((fmax-1.0)-fmin)*(num - data.min()))/(data.max() - data.min())) + fmin)
+        return np.array(newpoints)
 
     def fit(self, X, y):
         '''
