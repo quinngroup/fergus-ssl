@@ -59,7 +59,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         self.img_dims = img_dims
         self.numBins = numBins
 
-    def eigFunc(self,X,y):
+    def fit(self,X,y):
         self.X_ = X
         classes = np.sort(np.unique(y))
         if classes[0] == -1:
@@ -154,93 +154,6 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
 
         return self
         #return (sig,g,np.array(interpolators),b_edgeMeans,np.transpose(approxValues))
-
-    def transformer(fmin,fmax,data):
-        '''
-        Parameters
-        ----------
-        fmin : min boundary of the interpolator to which the data min is to be transformed to.
-
-        fmax : max boundary of the interpolator to which the data max is to be transformed to.
-
-        data : transform data points into the interpolator's boundary space
-
-        Returns
-        -------
-        newpoints : scaled datapoints for the given dimension
-        '''
-        newpoints=[]
-        for num in data:
-            newpoints.append(((((fmax-1.0)-fmin)*(num - data.min()))/(data.max() - data.min())) + fmin)
-        return np.array(newpoints)
-
-    def fit(self, X, y):
-        '''
-        Fit a semi-supervised eigenfunction label propagation model.
-
-        All input data is provided in matrix X (labeled and unlabeled), and
-        corresponding label vector y with dedicated marker value (-1) for
-        unlabeled samples.
-
-        Parameters
-        ----------
-        X : array-like, shape = [n_samples, n_features]
-            Feature vectors for data.
-        y : array-like, shape = [n_samples]
-            Label array, unlabeled points are marked as -1. All unlabeled
-            samples will be assigned labels.
-
-        Returns
-        -------
-        self : An instance of self.
-        '''
-        self.X_ = X
-        # Construct the graph laplacian from the graph matrix.
-        W = self._get_kernel(self.X_,y=None, ker=self.kernel)
-        D = np.diag(np.sum(W,axis=(1)))
-        L = self._unnormalized_graph_laplacian(D, W)
-        #L = W
-        # Perform the eigen-decomposition.
-        vals = None
-        vects = None
-        classes = np.sort(np.unique(y))
-        if classes[0] == -1:
-            classes = np.delete(classes, 0) # remove the -1 from this list
-            if self.k == -1:
-                self.k = np.size(classes)
-        #Creating generalized eigenvectors and eigenvalues.
-        vals, vects = scipy.linalg.eig(L,D)
-        self.u_ = np.real(vals)
-        # Construct some matrices.
-        # U: k eigenvectors corresponding to smallest eigenvalues. (n_samples by k)
-        # S: Diagonal matrix of k smallest eigenvalues. (k by k)
-        # V: Diagonal matrix of LaGrange multipliers for labeled data, 0 for unlabeled. (n_samples by n_samples)
-        self.vec = np.real(vects)
-        self.U_ = np.real(vects[:,:fp.k])
-        S = np.diag(self.u_[:fp.k])
-        V = np.diag(np.zeros(np.size(y)))
-        labeled = np.where(y != -1)
-        V[labeled, labeled] = self.lagrangian
-        # Solve for alpha and use it to compute the eigenfunctions, f.
-        A = S + np.dot(np.dot(self.U_.T, V), self.U_)
-        b = np.dot(np.dot(self.U_.T, V), y)
-        alpha = LA.solve(A, b)
-        self.al = alpha
-        f = np.dot(self.U_, alpha)
-        f = f.reshape((f.shape[0],-1))
-        self.func = f
-        # Set up a GMM to assign the hard labels from the eigenfunctions.
-        g = mixture.GMM(n_components = np.size(classes))
-        self.gdash = g
-        g.fit(f)
-        #secondEig = self.U_[:,1].reshape((self.U_.shape[0],-1))
-        #g.fit(secondEig)
-        self.labels_ = g.predict(f)
-        means = np.argsort(g.means_.flatten())
-        for i in range(0, np.size(self.labels_)):
-            self.labels_[i] = np.where(means == self.labels_[i])[0][0]
-        # Done!
-        return self
 
     def _get_kernel(self, X, y = None,ker=None):
         print(ker)
