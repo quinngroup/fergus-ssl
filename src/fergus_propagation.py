@@ -68,22 +68,23 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
                 self.k = np.size(classes)
         randomizedPCA = pca.RandomizedPCA(n_components=self.k)
         rotatedData = randomizedPCA.fit_transform(self.X_)
-        sz = self.X_[:,0].size
+        self.rd = rotatedData
+        dim = self.X_.shape[1]
 
         '''
         sig = an array to save the k smallest eigenvalues that we get for every p(s)
         g   = a 2d column array to save the k smallest eigenfunctions that we get for every p(s)
         '''
-        sig = np.empty((self.k,self.k))
-        g = np.empty(((self.k,self.numBins,self.k)))
-        hist = np.empty((self.k,self.numBins))
-        b_edgeMeans = np.empty((self.k,self.numBins))
+        sig = np.empty((dim,dim))
+        g = np.empty(((dim,self.numBins,dim)))
+        hist = np.empty((dim,self.numBins))
+        b_edgeMeans = np.empty((dim,self.numBins))
         interpolators = []
-        approxValues = np.empty((self.k,self.X_.shape[0]))
-        transformeddata = np.empty((self.k,self.X_.shape[0]))
+        approxValues = np.empty((dim,self.X_.shape[0]))
+        transformeddata = np.empty((dim,self.X_.shape[0]))
         #sig=np.array([])
         #g=np.array([])
-        for i in range(self.k):
+        for i in range(dim):
             histograms,binEdges = np.histogram(rotatedData[:,i],bins=self.numBins,density=True)
             #add 0.01 to histograms and normalize it
             histograms = histograms+ 0.01
@@ -107,17 +108,17 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
             #Creating generalized eigenfunctions and eigenvalues from histograms.
             sigmaVals, functions = scipy.linalg.eig((Ddis-(P.dot(Wdis.dot(P)))),(P.dot(Dhat)))
             #print("eigenValue"+repr(i)+": "+repr(np.real(sigmaVals[0:self.k]))+"Eigenfunctions"+repr(i)+": "+repr(np.real(functions[:,0:self.k])))
-            sig[i,:] = np.real(np.sort(sigmaVals)[0:self.k])
-            g[i,:,:] = np.real(np.sort(functions, axis=0)[:,0:self.k])
+            sig[i,:] = np.real(np.sort(sigmaVals)[0:dim])
+            g[i,:,:] = np.real(np.sort(functions, axis=0)[:,0:dim])
             hist[i,:] = histograms
             #interpolate in 1-D
             interpolators.append(ip.interp1d(np.sort(b_edgeMeans[i,:]), g[i,:, 1]))
             interp = ip.interp1d(b_edgeMeans[i,:], g[i,:, 1])
             #First check if the original datapoints need to be scaled according to the interpolator ranges
-            if(X1[:,i].min() < b_edgeMeans[i].min() or X1[:,i].max() > b_edgeMeans[i].max()):
+            if(self.X_[:,i].min() < b_edgeMeans[i].min() or self.X_[:,i].max() > b_edgeMeans[i].max()):
                 ls=[]
-                for num in X1[:,i]:
-                    ls.append(((((b_edgeMeans[i,:].max()-0.1)-b_edgeMeans[i,:].min())*(num - X1[:,i].min()))/(X1[:,i].max() - X1[:,i].min())) + b_edgeMeans[i,:].min())
+                for num in self.X_[:,i]:
+                    ls.append(((((b_edgeMeans[i,:].max()-0.000001)-b_edgeMeans[i,:].min())*(num - self.X_[:,i].min()))/(self.X_[:,i].max() - self.X_[:,i].min())) + b_edgeMeans[i,:].min())
                 transformeddata[i,:] = np.array(ls)
                 #transformeddata[i,:] = transformer(b_edgeMeans[i].min(), b_edgeMeans[i].max(), self.X_[:,i])
             else:
@@ -129,7 +130,6 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         # S: Diagonal matrix of k smallest eigenvalues. (k by k)
         # V: Diagonal matrix of LaGrange multipliers for labeled data, 0 for unlabeled. (n_samples by n_samples)
         U = np.transpose(approxValues)
-
         S = np.diag(sig[:,1])
         V = np.diag(np.zeros(np.size(y)))
         labeled = np.where(y != -1)
