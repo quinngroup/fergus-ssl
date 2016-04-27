@@ -81,7 +81,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         self.b_edgeMeans = np.empty((dim,self.numBins))
         self.approxValues = np.empty((dim,self.X_.shape[0]))
         transformeddata = np.empty((dim,self.X_.shape[0]))
-        interpolators=[]
+        self.interpolators=[]
         #sig=np.array([])
         #g=np.array([])
         for i in range(dim):
@@ -108,11 +108,12 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
             #Creating generalized eigenfunctions and eigenvalues from histograms.
             sigmaVals, functions = scipy.linalg.eig((Ddis-(P.dot(Wdis.dot(P)))),(P.dot(Dhat)))
             #print("eigenValue"+repr(i)+": "+repr(np.real(sigmaVals[0:self.k]))+"Eigenfunctions"+repr(i)+": "+repr(np.real(functions[:,0:self.k])))
+            print sigmaVals[0:self.k-1]
             self.sig[i,:] = np.real(np.sort(sigmaVals))[0:self.k]
             self.g[i,:,:] = np.real(np.sort(functions, axis=0))[:,0:self.k]
             hist[i,:] = histograms
             #interpolate in 1-D
-            interpolators.append(ip.interp1d(np.sort(self.b_edgeMeans[i,:]), self.g[i,:, 1]))
+            self.interpolators.append(ip.interp1d(np.sort(self.b_edgeMeans[i,:]), self.g[i,:, 1]))
             self.interp = ip.interp1d(self.b_edgeMeans[i,:], self.g[i,:, 1])
             '''
             #First check if the original datapoints need to be scaled according to the interpolator ranges
@@ -127,8 +128,9 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
                 transformeddata[i,:] = np.transpose(self.X_)[i,:]
             '''
             transformeddata[i,:] = self.get_transformed_data(self.X_,self.b_edgeMeans,i)
+            self.orig_t = transformeddata
             #get approximated eigenvectors for all n points using the interpolators
-            self.approxValues[i,:] = self.interp(transformeddata[i,:])
+            self.approxValues[i,:] = self.interpolators[i](transformeddata[i,:])
         self.labels_ = self.solver(np.transpose(self.approxValues),y)
         return self
         #return (sig,g,np.array(interpolators),b_edgeMeans,np.transpose(approxValues))
@@ -162,13 +164,13 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
 
     def predict(self,X,y=None):
         dim = X.shape[1]
-        transformed = np.empty((dim,X.shape[0]))
+        self.transformed = np.empty((dim,X.shape[0]))
         approxVectors = np.empty((dim,X.shape[0]))
         for i in range(dim):
             #transform new data
-            transformed[i,:] = self.get_transformed_data(X,self.b_edgeMeans,i)
+            self.transformed[i,:] = self.get_transformed_data(X,self.b_edgeMeans,i)
             #get approximated eigenvectors for all n points using the interpolators
-            approxVectors[i,:] = self.interp(transformed[i,:])
+            approxVectors[i,:] = self.interpolators[i](self.transformed[i,:])
         newlabels = self.solver(np.transpose(approxVectors),y)
         return newlabels
 
