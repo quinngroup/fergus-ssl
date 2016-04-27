@@ -87,8 +87,8 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         for i in range(dim):
             histograms,binEdges = np.histogram(rotatedData[:,i],bins=self.numBins,density=True)
             #add 0.35 to histograms and normalize it
-            histograms = histograms+ 0.35
-            histograms /= histograms.sum()
+            histograms = histograms+ 0.25
+            #histograms /= histograms.sum()
             # calculating means on the bin edges as the x-axis for the interpolators
             self.b_edgeMeans[i,:] = np.array([binEdges[j:j + 2].mean() for j in range(binEdges.shape[0] - 1)])
             #get D~, P, W~
@@ -108,7 +108,6 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
             #Creating generalized eigenfunctions and eigenvalues from histograms.
             sigmaVals, functions = scipy.linalg.eig((Ddis-(P.dot(Wdis.dot(P)))),(P.dot(Dhat)))
             #print("eigenValue"+repr(i)+": "+repr(np.real(sigmaVals[0:self.k]))+"Eigenfunctions"+repr(i)+": "+repr(np.real(functions[:,0:self.k])))
-            print sigmaVals[0:self.k-1]
             self.sig[i,:] = np.real(np.sort(sigmaVals))[0:self.k]
             self.g[i,:,:] = np.real(np.sort(functions, axis=0))[:,0:self.k]
             hist[i,:] = histograms
@@ -181,10 +180,10 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
             ls=[]
             for num in ori_data[:,i]:
                 val = (((edge_means[i,:].max()-edge_means[i,:].min())*(num - ori_data[:,i].min()))/(ori_data[:,i].max() - ori_data[:,i].min())) + edge_means[i,:].min()
-                if val==ori_data[:,i].min():
-                    val = val + 0.1
-                if val==ori_data[:,i].max():
-                    val = val - 0.1
+                if num==ori_data[:,i].min():
+                    val = val + 0.001
+                if num==ori_data[:,i].max():
+                    val = val - 0.001
                 ls.append(val)
             return np.array(ls)
             #transformeddata[i,:] = transformer(b_edgeMeans[i].min(), b_edgeMeans[i].max(), self.X_[:,i])
