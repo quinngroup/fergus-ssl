@@ -48,7 +48,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
     Gigantic Image Collections (2009).
     http://eprints.pascal-network.org/archive/00005636/01/ssl-1.pdf
     '''
-    def __init__(self, kernel = 'rbf', k = -1, gamma = 0.1, n_neighbors = 7, lagrangian = 10, img_dims = (-1, -1), numBins = 10):
+    def __init__(self, kernel = 'rbf', k = -1, gamma = None, n_neighbors = 7, lagrangian = 10, img_dims = (-1, -1), numBins = 10):
         # This doesn't iterate at all, so the parameters are very different
         # from the BaseLabelPropagation parameters.
         self.kernel = kernel
@@ -75,8 +75,8 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         sig = an array to save the k smallest eigenvalues that we get for every p(s)
         g   = a 2d column array to save the k smallest eigenfunctions that we get for every p(s)
         '''
-        self.sig = np.empty((dim,dim))
-        self.g = np.empty(((dim,self.numBins,dim)))
+        self.sig = np.empty((dim,self.k))
+        self.g = np.empty(((dim,self.numBins,self.k)))
         hist = np.empty((dim,self.numBins))
         self.b_edgeMeans = np.empty((dim,self.numBins))
         self.approxValues = np.empty((dim,self.X_.shape[0]))
@@ -130,15 +130,10 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
             self.orig_t = transformeddata
             #get approximated eigenvectors for all n points using the interpolators
             self.approxValues[i,:] = self.interpolators[i](transformeddata[i,:])
-        self.labels_ = self.solver(np.transpose(self.approxValues),y)
-        return self
-        #return (sig,g,np.array(interpolators),b_edgeMeans,np.transpose(approxValues))
-
-    def solver(self ,vectors,y=None):
         # U: k eigenvectors corresponding to smallest eigenvalues. (n_samples by k)
         # S: Diagonal matrix of k smallest eigenvalues. (k by k)
         # V: Diagonal matrix of LaGrange multipliers for labeled data, 0 for unlabeled. (n_samples by n_samples)
-        U = vectors
+        U = np.transpose(self.approxValues)
         S = np.diag(self.sig[:,1])
         V = np.diag(np.zeros(np.size(y)))
         labeled = np.where(y != -1)
@@ -146,10 +141,16 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         # Solve for alpha and use it to compute the eigenfunctions, f.
         A = S + np.dot(np.dot(U.T, V), U)
         b = np.dot(np.dot(U.T, V), y)
-        alpha = LA.solve(A, b)
-        f = np.dot(U, alpha)
+        self.alpha = LA.solve(A, b)
+
+        self.labels_ = self.solver(U)
+        return self
+        #return (sig,g,np.array(interpolators),b_edgeMeans,np.transpose(approxValues))
+
+    def solver(self ,vectors):
+        U = vectors
+        f = np.dot(U, self.alpha)
         f = f.reshape((f.shape[0],-1))
-        self.f1=f
         # Set up a GMM to assign the hard labels from the eigenfunctions.
         g = mixture.GMM(n_components = np.size(self.classes))
         g.fit(f)
@@ -170,7 +171,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
             self.transformed[i,:] = self.get_transformed_data(X,self.b_edgeMeans,i)
             #get approximated eigenvectors for all n points using the interpolators
             approxVectors[i,:] = self.interpolators[i](self.transformed[i,:])
-        newlabels = self.solver(np.transpose(approxVectors),y)
+        newlabels = self.solver(np.transpose(approxVectors))
         return newlabels
 
     def get_transformed_data(self,ori_data,edge_means,i):
