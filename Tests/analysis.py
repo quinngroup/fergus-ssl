@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import timeit
 import sys
 import os
+from sklearn.cross_validation import KFold
 
 var = float(sys.argv[1])
 size = int(sys.argv[2])
@@ -22,20 +23,7 @@ trainY = dataY[randind]
 testindices = np.setdiff1d(np.arange(size),randind)
 testX = dataX[testindices]
 testY = dataY[testindices]
-plt.figure(0)
-plt.scatter(trainX[:, 0], trainX[:, 1], marker='o', c=trainY, cmap = ('rainbow_r'))
-plt.figure(1)
-plt.scatter(testX[:, 0], testX[:, 1], marker='o', c=testY, cmap = ('rainbow_r'))
-plt.show()
 
-s1 = '/home/madhura/Computational_Olfaction/fergus-ssl/Results/' + repr(size) +'_blobs_prediction_before'
-i = 0
-while os.path.exists('{}{:d}.png'.format(s1, i)):
-    i += 1
-plt.savefig('{}{:d}.png'.format(s1, i))
-plt.cla()
-plt.clf()
-#plt.show()
 def labelremover(X,y):
     newX1 = np.around(X,decimals=2)
     newY1=np.copy(y)
@@ -53,20 +41,52 @@ newtrainY = labelremover(train,trainY)
 with open('/home/madhura/Computational_Olfaction/fergus-ssl/src/fergus_propagation.py') as source_file:
     exec(source_file.read())
 
-fp = FergusPropagation()
-fp.fit(trainX,newtrainY)
-predicted_labels = fp.predict(testX)
-plt.figure(0)
-plt.scatter(trainX[:, 0], trainX[:, 1], marker='o', c=trainY, cmap = ('Paired'))
-plt.figure(1)
-plt.scatter(trainX[:, 0], trainX[:, 1], marker='o', c=fp.labels_, cmap = ('Paired'))
-plt.show()
-plt.figure(0)
-plt.scatter(testX[:, 0], testX[:, 1], marker='o', c=testY, cmap = ('Paired'))
-plt.figure(1)
-plt.scatter(testX[:, 0], testX[:, 1], marker='o', c=predicted_labels, cmap = ('Paired'))
+kf = KFold(size, n_folds=5)
+for train, test in kf:
+    trainind = train
+    testind = test
+    trainX = dataX[trainind]
+    trainY = dataY[trainind]
+    testX = dataX[testind]
+    testY = dataY[testind]
+    plt.figure(0)
+    plt.scatter(trainX[:, 0], trainX[:, 1], marker='o', c=trainY, cmap = ('rainbow_r'))
+    plt.title('size: '+repr(size)+' gamma: '+repr(gamma)+' sd: '+repr(var))
+    plt.figure(1)
+    plt.scatter(testX[:, 0], testX[:, 1], marker='o', c=testY, cmap = ('rainbow_r'))
+    plt.title('size: '+repr(size)+' gamma: '+repr(gamma)+' sd: '+repr(var))
+    plt.show()
+    newtrainY = labelremover(trainX,trainY)
+    fp = FergusPropagation()
+    fp.fit(trainX,newtrainY)
+    predicted_labels = fp.predict(testX)
+    plt.figure(0)
+    plt.scatter(trainX[:, 0], trainX[:, 1], marker='o', c=trainY, cmap = ('Paired'))
+    plt.title('Training set before labeling size: '+repr(size)+' gamma: '+repr(gamma)+' sd: '+repr(var))
+    plt.figure(1)
+    plt.scatter(trainX[:, 0], trainX[:, 1], marker='o', c=fp.labels_, cmap = ('Paired'))
+    plt.title('Training set after labeling size: '+repr(size)+' gamma: '+repr(gamma)+' sd: '+repr(var))
+    plt.show()
+    plt.figure(0)
+    plt.scatter(testX[:, 0], testX[:, 1], marker='o', c=testY, cmap = ('Paired'))
+    plt.title('Test set before prediction size: '+repr(size)+' gamma: '+repr(gamma)+' sd: '+repr(var))
+    plt.figure(1)
+    plt.scatter(testX[:, 0], testX[:, 1], marker='o', c=predicted_labels, cmap = ('Paired'))
+    plt.title('Test set after prediction size: '+repr(size)+' gamma: '+repr(gamma)+' sd: '+repr(var))
+    plt.show()
+
 
 '''--------------------------------------------------------------------------------------------------------------'''
+
+
+s1 = '/home/madhura/Computational_Olfaction/fergus-ssl/Results/' + repr(size) +'_blobs_prediction_before'
+i = 0
+while os.path.exists('{}{:d}.png'.format(s1, i)):
+    i += 1
+plt.savefig('{}{:d}.png'.format(s1, i))
+plt.cla()
+plt.clf()
+#plt.show()
 
 oldLabels = np.copy(Y1)
 newLabels = np.copy(fp.labels_)
