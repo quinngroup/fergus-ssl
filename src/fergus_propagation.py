@@ -62,15 +62,13 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
     def fit(self,X,y=None):
         self.X_ = X
         self.classes = np.sort(np.unique(y))
+        dim = self.X_.shape[1]
         if self.classes[0] == -1:
             self.classes = np.delete(self.classes, 0) # remove the -1 from this list
             if self.k == -1:
                 self.k = np.size(self.classes)
-        randomizedPCA = pca.RandomizedPCA(n_components=self.k)
+        randomizedPCA = pca.RandomizedPCA(n_components=dim)
         rotatedData = randomizedPCA.fit_transform(self.X_)
-        self.rd = rotatedData
-        dim = self.X_.shape[1]
-
         '''
         sig = an array to save the k smallest eigenvalues that we get for every p(s)
         g   = a 2d column array to save the k smallest eigenfunctions that we get for every p(s)
@@ -108,8 +106,8 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
             #Creating generalized eigenfunctions and eigenvalues from histograms.
             sigmaVals, functions = scipy.linalg.eig((Ddis-(P.dot(Wdis.dot(P)))),(P.dot(Dhat)))
             #print("eigenValue"+repr(i)+": "+repr(np.real(sigmaVals[0:self.k]))+"Eigenfunctions"+repr(i)+": "+repr(np.real(functions[:,0:self.k])))
-            self.sig[i,:] = np.real(np.sort(sigmaVals))[0:self.k]
-            self.g[i,:,:] = np.real(np.sort(functions, axis=0))[:,0:self.k]
+            self.sig[i,:] = np.real(sigmaVals)[0:self.k]
+            self.g[i,:,:] = np.real(functions)[:,0:self.k]
             hist[i,:] = histograms
             #interpolate in 1-D
             self.interpolators.append(ip.interp1d(np.sort(self.b_edgeMeans[i,:]), self.g[i,:, 1]))
@@ -150,6 +148,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
     def solver(self ,vectors):
         U = vectors
         f = np.dot(U, self.alpha)
+        self.func = f
         f = f.reshape((f.shape[0],-1))
         # Set up a GMM to assign the hard labels from the eigenfunctions.
         g = mixture.GMM(n_components = np.size(self.classes))

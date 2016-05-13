@@ -1,0 +1,117 @@
+Number of incorrectly clustered points:126
+Results for blob size 1000 and standard deviation 2.5
+Runtime: 5.47702217102
+Gamma is 0.005
+blob variance is 2.5
+data size is1000
+Number of incorrectly clustered points:500
+Results for blob size 1000 and standard deviation 3.5
+Runtime: 5.49259996414
+Gamma is 0.005
+blob variance is 3.5
+data size is1000
+Number of incorrectly clustered points:500
+Results for blob size 1000 and standard deviation 4.5
+Runtime: 5.63297700882
+Gamma is 0.005
+blob variance is 4.5
+data size is1000
+Number of incorrectly clustered points:381
+Results for blob size 1000 and standard deviation 2.5
+Runtime: 5.42162013054
+Gamma is 0.01
+blob variance is 2.5
+data size is1000
+Number of incorrectly clustered points:95
+Results for blob size 1000 and standard deviation 3.5
+Runtime: 5.44413590431
+Gamma is 0.01
+blob variance is 3.5
+data size is1000
+Number of incorrectly clustered points:13
+Results for blob size 1000 and standard deviation 4.5
+Runtime: 5.44680690765
+Gamma is 0.01
+blob variance is 4.5
+data size is1000
+Number of incorrectly clustered points:57
+Results for blob size 1000 and standard deviation 2.5
+Runtime: 5.76319789886
+Gamma is 0.1
+blob variance is 2.5
+data size is1000
+Number of incorrectly clustered points:68
+Results for blob size 1000 and standard deviation 3.5
+Runtime: 5.77742600441
+Gamma is 0.1
+blob variance is 3.5
+data size is1000
+Number of incorrectly clustered points:382
+Results for blob size 1000 and standard deviation 4.5
+Runtime: 5.73953485489
+Gamma is 0.1
+blob variance is 4.5
+data size is1000
+
+Number of incorrectly clustered points:15
+Results for blob size 500 and standard deviation 2.5
+Runtime: 0.653392076492
+Gamma is 0.005
+blob variance is 2.5
+data size is500
+
+Number of incorrectly clustered points:5
+Results for blob size 500 and standard deviation 3.5
+Runtime: 0.650568962097
+Gamma is 0.005
+blob variance is 3.5
+data size is500
+
+Number of incorrectly clustered points:26
+Results for blob size 500 and standard deviation 4.5
+Runtime: 0.6529109478
+Gamma is 0.005
+blob variance is 4.5
+data size is500
+
+Number of incorrectly clustered points:5
+Results for blob size 500 and standard deviation 2.5
+Runtime: 0.645633935928
+Gamma is 0.01
+blob variance is 2.5
+data size is500
+
+Number of incorrectly clustered points:250
+Results for blob size 500 and standard deviation 3.5
+Runtime: 0.674871921539
+Gamma is 0.01
+blob variance is 3.5
+data size is500
+
+Number of incorrectly clustered points:250
+Results for blob size 500 and standard deviation 4.5
+Runtime: 0.663182973862
+Gamma is 0.01
+blob variance is 4.5
+data size is500
+
+Number of incorrectly clustered points:98
+Results for blob size 500 and standard deviation 2.5
+Runtime: 0.682880878448
+Gamma is 0.1
+blob variance is 2.5
+data size is500
+
+Number of incorrectly clustered points:148
+Results for blob size 500 and standard deviation 3.5
+Runtime: 0.726922035217
+Gamma is 0.1
+blob variance is 3.5
+data size is500
+
+Number of incorrectly clustered points:15
+Results for blob size 500 and standard deviation 4.5
+Runtime: 0.830953836441
+Gamma is 0.1
+blob variance is 4.5
+data size is500
