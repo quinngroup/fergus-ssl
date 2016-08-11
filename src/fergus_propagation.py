@@ -17,7 +17,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
 
     Parameters
     ----------
-    kernel : {'rbf', 'img', 'knn'}
+    kernel : {'rbf', 'img', 'knn'} #for now just rbf
         String identifier for kernel function to use.
         rbf: Creates a fully-connected dense RBF kernel.
         img: Creates a sparse RBF kernel where each pixel is connected only
@@ -48,16 +48,15 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
     Gigantic Image Collections (2009).
     http://eprints.pascal-network.org/archive/00005636/01/ssl-1.pdf
     '''
-    def __init__(self, kernel = 'rbf', k = -1, gamma = None, n_neighbors = 7, lagrangian = 10, img_dims = (-1, -1), numBins = 10):
+    def __init__(self, kernel = 'rbf', k = -1, gamma = None, lagrangian = 10):
         # This doesn't iterate at all, so the parameters are very different
         # from the BaseLabelPropagation parameters.
         self.kernel = kernel
         self.k = k
         self.gamma = gamma
-        self.n_neighbors = n_neighbors
+        #self.n_neighbors = n_neighbors
         self.lagrangian = lagrangian
-        self.img_dims = img_dims
-        self.numBins = numBins
+
 
     def fit(self,X,y=None):
         self.X_ = X
@@ -73,19 +72,21 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         sig = an array to save the k smallest eigenvalues that we get for every p(s)
         g   = a 2d column array to save the k smallest eigenfunctions that we get for every p(s)
         '''
+        numBins = int(np.sqrt(len(rotatedData)))
+        numBins = 2
         self.sig = np.empty((dim,self.k))
-        self.g = np.empty(((dim,self.numBins,self.k)))
-        hist = np.empty((dim,self.numBins))
-        self.b_edgeMeans = np.empty((dim,self.numBins))
+        self.g = np.empty(((dim,numBins,self.k)))
+        hist = np.empty((dim,numBins))
+        self.b_edgeMeans = np.empty((dim,numBins))
         self.approxValues = np.empty((dim,self.X_.shape[0]))
         transformeddata = np.empty((dim,self.X_.shape[0]))
         self.interpolators=[]
         #sig=np.array([])
         #g=np.array([])
         for i in range(dim):
-            histograms,binEdges = np.histogram(rotatedData[:,i],bins=self.numBins,density=True)
+            histograms,binEdges = np.histogram(rotatedData[:,i],bins=numBins,density=True)
             #add 0.35 to histograms and normalize it
-            histograms = histograms+ 0.25
+            histograms = histograms+ 0.01
             #histograms /= histograms.sum()
             # calculating means on the bin edges as the x-axis for the interpolators
             self.b_edgeMeans[i,:] = np.array([binEdges[j:j + 2].mean() for j in range(binEdges.shape[0] - 1)])
