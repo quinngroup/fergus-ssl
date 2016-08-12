@@ -73,7 +73,8 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         g   = a 2d column array to save the k smallest eigenfunctions that we get for every p(s)
         '''
         numBins = int(np.sqrt(len(rotatedData)))
-        numBins = 2
+        numBins = self.k
+
         self.sig = np.empty((dim,self.k))
         self.g = np.empty(((dim,numBins,self.k)))
         hist = np.empty((dim,numBins))
@@ -89,6 +90,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
             histograms = histograms+ 0.01
             #histograms /= histograms.sum()
             # calculating means on the bin edges as the x-axis for the interpolators
+            print "hist shape: "+str(histograms.shape)
             self.b_edgeMeans[i,:] = np.array([binEdges[j:j + 2].mean() for j in range(binEdges.shape[0] - 1)])
             #get D~, P, W~
             '''
@@ -107,6 +109,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
             #Creating generalized eigenfunctions and eigenvalues from histograms.
             sigmaVals, functions = scipy.linalg.eig((Ddis-(P.dot(Wdis.dot(P)))),(P.dot(Dhat)))
             #print("eigenValue"+repr(i)+": "+repr(np.real(sigmaVals[0:self.k]))+"Eigenfunctions"+repr(i)+": "+repr(np.real(functions[:,0:self.k])))
+            print str(np.real(sigmaVals)[0:self.k])
             self.sig[i,:] = np.real(sigmaVals)[0:self.k]
             self.g[i,:,:] = np.real(functions)[:,0:self.k]
             hist[i,:] = histograms
@@ -139,9 +142,11 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         V[labeled, labeled] = self.lagrangian
         # Solve for alpha and use it to compute the eigenfunctions, f.
         A = S + np.dot(np.dot(U.T, V), U)
+        if np.linalg.det(A) == 0:
+            A = A + np.eye(A.shape[1])*0.000001
         b = np.dot(np.dot(U.T, V), y)
-        self.alpha = LA.solve(A, b)
-
+        self.alpha = np.linalg.solve(A, b)
+        print "this is alpha " + str(self.alpha)
         self.labels_ = self.solver(U)
         return self
         #return (sig,g,np.array(interpolators),b_edgeMeans,np.transpose(approxValues))
