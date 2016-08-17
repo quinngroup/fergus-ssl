@@ -8,7 +8,7 @@ import os
 from sklearn.cross_validation import KFold
 from collections import OrderedDict
 import operator
-
+import random
 var = float(sys.argv[1])
 size = int(sys.argv[2])
 gamma = float(sys.argv[3])
@@ -16,20 +16,25 @@ clusters = int(sys.argv[4])
 dimensions = int(sys.argv[5])
 #numBins = float(sys.argv[6])
 #dataX,dataY=datasets.make_blobs(n_samples=size, n_features=dimensions, centers=clusters, cluster_std=var, center_box=(-10.0, 10.0), shuffle=True, random_state=None)
-dataX,dataY=datasets.make_s_curve(n_samples=size,random_state=None)
+dataX,dataY=datasets.make_circles(n_samples=size,random_state=None, factor = 0.1)
 #print dataX.shape
 def labelremover(X,y):
     newX1 = np.around(X,decimals=2)
     newY1=np.copy(y)
     dim = X.shape[1]
     points = np.array(np.empty(len(np.unique(y))))
+    knownX = np.empty((len(points),dim))
+    knownY = np.empty(len(points))
     for i in np.unique(y):
         points[i] = np.where(y==(i))[0][0]
     for j in np.arange(0,len(newY1)):
         newY1[j]=-1
     for k in np.unique(y):
         newY1[points[k]] = y[points[k]]
-    return (newY1, np.array(points))
+    knownX = X[[i for i in points]]
+    knownY = y[[i for i in points]]
+    print "These are labels of known points: "+ str(knownY)
+    return (newY1, knownX, knownY)
 
 class DefaultListOrderedDict(OrderedDict):
     def __missing__(self,k):
@@ -43,7 +48,8 @@ fp = FergusPropagation(gamma = gamma)
 setdict = DefaultListOrderedDict()
 trainErrDict = OrderedDict()
 testErrDict = OrderedDict()
-knownPoint = OrderedDict()
+knownPoint = DefaultListOrderedDict()
+knownLabel = DefaultListOrderedDict()
 counter=0
 kf = KFold(size, n_folds=5)
 for train, test in kf:
@@ -55,18 +61,32 @@ for train, test in kf:
     trainY = dataY[trainind]
     testX = dataX[testind]
     testY = dataY[testind]
-    newtrainY, indices = labelremover(trainX,trainY)
-    knownPoint[counter] = np.array(indices)
-    print ("These are indices of labeled daa: "+ repr(indices))
+    newtrainY, knownX, knownY = labelremover(trainX,trainY)
+    knownPoint[counter].append(knownX)
+    knownLabel[counter].append(knownY)
+    '''
+    scale = 2.0
+    #for i in range(trainX.shape[1]):
+        #sd1.append(np.std(trainX[:,i]))
+    for inst in range(len(trainX)):
+        for f in range(len(trainX[inst])):
+                rnd = random.uniform(-trainX[inst][f], trainX[inst][f])
+        trainX[inst] = trainX[inst] + float(rnd)/float(scale)
+    #for i in range(testX.shape[1]):
+        #sd1.append(np.std(testX[:,i]))
+    for inst in range(len(testX)):
+        for f in range(len(testX[inst])):
+                rnd = random.uniform(-testX[inst][f], testX[inst][f])
+        testX[inst] = testX[inst] + float(rnd)/float(scale)
+
+    plt1.scatter(trainX[:,0], trainX[:,1], c=trainY, cmap = (('ocean')))
+    plt1.show()
+    '''
     fp.fit(trainX,newtrainY)
     trainfunc = fp.func
-    plt1.scatter(np.arange(len(trainfunc)),trainfunc, c=trainY, cmap = ('ocean'))
-    plt1.show()
     #print "train "+ str(trainfunc.shape)
     predicted_labels = fp.predict(testX)
     testfunc = fp.func
-    plt1.scatter(np.arange(len(testfunc)), testfunc, c=testY, cmap = ('ocean'))
-    plt1.show()
     #print "test "+ str(testfunc.shape)
     oldTrainLabels = np.copy(trainY)
     newTrainLabels = np.copy(fp.labels_)
@@ -78,7 +98,7 @@ for train, test in kf:
     setdict[counter].append(tempList)
     trainErrDict[counter] = TrainError
     testErrDict[counter] = TestError
-    #plt.show()
+    #plt.show()a
 
 #plt.figure(0)
 minInd = min(trainErrDict.iteritems(), key=operator.itemgetter(1))[0]
@@ -92,20 +112,35 @@ ori_labels = setdict[minInd][0][4]
 predicted_labels = setdict[minInd][0][5]
 TrainError = trainErrDict[minInd]
 TestError = testErrDict[minInd]
-labelled = np.array(knownPoint[minInd].reshape(knownPoint[minInd].shape[0]))
+knownX = knownPoint[minInd][0]
+knownY = knownLabel[minInd][0]
+labels = ['point{0}'.format(i) for i in range(len(knownY))]
 plt.scatter(trainX[:, 0], trainX[:, 1], marker='o', c=trainY, cmap = ('ocean'))
+plt.scatter(knownX[:,0], knownX[:,1], marker = 'D', c = knownY,cmap = (('YlOrRd')))
+for label, x, y in zip(labels, knownX[:, 0], knownX[:, 1]):
+    plt.annotate(label, xy = (x,y), xytext = (-20,20), textcoords = 'offset points',
+    ha = 'right', va = 'bottom',bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow',
+    alpha = 0.5),arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
+
 plt.title('Training set before labeling size: '+repr(trainX.shape[0])+' sd: '+repr(var))
 #plt.scatter(trainX[labelled[:],0], trainX[labelled[:],1], marker = 'o', c=trainY[labelled[:]])
-#s1 = "./Results/Train_before_"+repr(trainX.shape[0])+"C"+repr(clusters)+"D"+repr(dimensions)+'k'+repr(counter)
-s1 = "./Results/Train_before_"+repr(trainX.shape[0])+"D"+repr(dimensions)+'k'+repr(counter)
+s1 = "./Results/NoisyCircles_Train_before_"+repr(trainX.shape[0])+"C"+repr(clusters)+"D"+repr(dimensions)+'k'+repr(counter)
+#s1 = "./Results/Train_before_"+repr(trainX.shape[0])+"D"+repr(dimensions)+'k'+repr(counter)
 plt.savefig(s1)
 plt.cla()
 plt.clf()
 #plt.figure(1)
 
 plt.scatter(trainX[:, 0], trainX[:, 1], marker='o', c=ori_labels, cmap = ('ocean'))
+plt.scatter(knownX[:,0], knownX[:,1], marker = 'D', c = knownY, cmap = (('YlOrRd')))
+for label, x, y in zip(labels, knownX[:, 0], knownX[:, 1]):
+    plt.annotate(label, xy = (x,y), xytext = (-20,20), textcoords = 'offset points',
+    ha = 'right', va = 'bottom',bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow',
+    alpha = 0.5),arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
+
+
 plt.title('Training set after labeling size: '+repr(trainX.shape[0])+ 'Train Error: '+ repr(TrainError)+' sd: '+repr(var))
-s2 = "./Results/Train_after_"+repr(trainX.shape[0])+"D"+repr(dimensions)+'k'+repr(counter)
+s2 = "./Results/NoisyCircles_Train_after_"+repr(trainX.shape[0])+"C"+repr(clusters)+"D"+repr(dimensions)+'k'+repr(counter)
 plt.savefig(s2)
 plt.cla()
 plt.clf()
@@ -113,14 +148,14 @@ plt.clf()
 #plt.figure(0)
 plt.scatter(testX[:, 0], testX[:, 1], marker='o', c=testY, cmap = ('ocean'))
 plt.title('Test set before prediction size: '+repr(testX.shape[0])+' sd: '+repr(var))
-s3 = "./Results/Test_before_"+repr(testX.shape[0])+"D"+repr(dimensions)+"Bins"+'k'+repr(counter)
+s3 = "./Results/NoisyCircles_Test_before_"+repr(testX.shape[0])+"C"+repr(clusters)+"D"+repr(dimensions)+"Bins"+'k'+repr(counter)
 plt.savefig(s3)
 plt.cla()
 plt.clf()
 #plt.figure(1)
 plt.scatter(testX[:, 0], testX[:, 1], marker='o', c=predicted_labels, cmap = ('ocean'))
 plt.title('Test set after prediction size: '+repr(testX.shape[0])+'Test Error: '+ repr(TestError)+' sd: '+repr(var))
-s4 = "./Results/Test_after_"+repr(testX.shape[0])+"D"+repr(dimensions)+"Bins"+'k'+repr(counter)
+s4 = "./Results/NoisyCircles_Test_after_"+repr(testX.shape[0])+"C"+repr(clusters)+"D"+repr(dimensions)+"Bins"+'k'+repr(counter)
 plt.savefig(s4)
 plt.cla()
 plt.clf()

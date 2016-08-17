@@ -10,7 +10,8 @@ from sklearn import decomposition as pca
 from scipy import interpolate as ip
 import sklearn.mixture as mixture
 import sys
-
+from sklearn.metrics.pairwise import chi2_kernel
+from sklearn.neighbors import DistanceMetric
 class FergusPropagation(BaseEstimator, ClassifierMixin):
     '''
     The Fergus et al 2009 eigenfunction propagation classifier.
@@ -74,7 +75,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         '''
         numBins = int(np.sqrt(len(rotatedData)))
         numBins = self.k
-
+        print "The gamma is: "+ str(self.gamma)
         self.sig = np.empty((dim,self.k))
         self.g = np.empty(((dim,numBins,self.k)))
         hist = np.empty((dim,numBins))
@@ -86,8 +87,10 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         #g=np.array([])
         for i in range(dim):
             histograms,binEdges = np.histogram(rotatedData[:,i],bins=numBins,density=True)
-            #add 0.35 to histograms and normalize it
+
+            #add 0.01 to histograms and normalize it
             histograms = histograms+ 0.01
+            histograms = histograms / np.linalg.norm(histograms)
             #histograms /= histograms.sum()
             # calculating means on the bin edges as the x-axis for the interpolators
             print "hist shape: "+str(histograms.shape)
@@ -101,7 +104,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
             Dhat = Diagonal matrix whose diagonal elements are the sum of columns of PW~
             '''
             kernel = "linear"
-            Wdis = self._get_kernel(histograms.reshape(histograms.shape[0],1),y=None,ker="linear")
+            Wdis = self._get_kernel(histograms.reshape(histograms.shape[0],1),y=None,ker="rbf")
             P  = np.diag(histograms)
             print("Wdis:" + repr(Wdis.shape) + " P: "+ repr(P.shape))
             Ddis = np.diag(np.sum((P.dot(Wdis.dot(P))),axis=0))
@@ -145,6 +148,8 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         if np.linalg.det(A) == 0:
             A = A + np.eye(A.shape[1])*0.000001
         b = np.dot(np.dot(U.T, V), y)
+        #print "this is A: "+ str(A)
+        #print "this is b: "+ str(b)
         self.alpha = np.linalg.solve(A, b)
         print "this is alpha " + str(self.alpha)
         self.labels_ = self.solver(U)
@@ -207,10 +212,13 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
                 return pairwise.rbf_kernel(X, y, gamma = self.gamma)
         elif ker == "linear":
             print(ker)
+            dist = DistanceMetric.get_metric('euclidean')
             if y is None:
                 return pairwise.euclidean_distances(X, X)
+                #return dist.pairwise(X)
             else:
                 return pairwise.euclidean_distances(X, y)
+                #return dist.pairwise(X)
         else:
             raise ValueError("%s is not a valid kernel. Only rbf and knn"
                              " are supported at this time" % self.kernel)
