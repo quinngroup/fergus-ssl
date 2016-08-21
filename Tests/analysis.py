@@ -15,8 +15,8 @@ gamma = float(sys.argv[3])
 clusters = int(sys.argv[4])
 dimensions = int(sys.argv[5])
 #numBins = float(sys.argv[6])
-#dataX,dataY=datasets.make_blobs(n_samples=size, n_features=dimensions, centers=clusters, cluster_std=var, center_box=(-10.0, 10.0), shuffle=True, random_state=None)
-dataX,dataY=datasets.make_circles(n_samples=size,random_state=None, factor = 0.1)
+dataX,dataY=datasets.make_blobs(n_samples=size, n_features=dimensions, centers=clusters, cluster_std=var, center_box=(-10.0, 10.0), shuffle=True, random_state=None)
+#dataX,dataY=datasets.make_circles(n_samples=size,random_state=None, factor = 0.1)
 #print dataX.shape
 def labelremover(X,y):
     newX1 = np.around(X,decimals=2)
@@ -83,10 +83,10 @@ for train, test in kf:
     plt1.show()
     '''
     fp.fit(trainX,newtrainY)
-    trainfunc = fp.func
+    #trainfunc = fp.func
     #print "train "+ str(trainfunc.shape)
     predicted_labels = fp.predict(testX)
-    testfunc = fp.func
+    #testfunc = fp.func
     #print "test "+ str(testfunc.shape)
     oldTrainLabels = np.copy(trainY)
     newTrainLabels = np.copy(fp.labels_)
@@ -124,7 +124,7 @@ for label, x, y in zip(labels, knownX[:, 0], knownX[:, 1]):
 
 plt.title('Training set before labeling size: '+repr(trainX.shape[0])+' sd: '+repr(var))
 #plt.scatter(trainX[labelled[:],0], trainX[labelled[:],1], marker = 'o', c=trainY[labelled[:]])
-s1 = "./Results/NoisyCircles_Train_before_"+repr(trainX.shape[0])+"C"+repr(clusters)+"D"+repr(dimensions)+'k'+repr(counter)
+s1 = "./Results/Train_before_"+repr(trainX.shape[0])+"C"+repr(clusters)+"D"+repr(dimensions)+'k'+repr(counter)
 #s1 = "./Results/Train_before_"+repr(trainX.shape[0])+"D"+repr(dimensions)+'k'+repr(counter)
 plt.savefig(s1)
 plt.cla()
@@ -140,7 +140,7 @@ for label, x, y in zip(labels, knownX[:, 0], knownX[:, 1]):
 
 
 plt.title('Training set after labeling size: '+repr(trainX.shape[0])+ 'Train Error: '+ repr(TrainError)+' sd: '+repr(var))
-s2 = "./Results/NoisyCircles_Train_after_"+repr(trainX.shape[0])+"C"+repr(clusters)+"D"+repr(dimensions)+'k'+repr(counter)
+s2 = "./Results/Train_after_"+repr(trainX.shape[0])+"C"+repr(clusters)+"D"+repr(dimensions)+'k'+repr(counter)
 plt.savefig(s2)
 plt.cla()
 plt.clf()
@@ -148,14 +148,14 @@ plt.clf()
 #plt.figure(0)
 plt.scatter(testX[:, 0], testX[:, 1], marker='o', c=testY, cmap = ('ocean'))
 plt.title('Test set before prediction size: '+repr(testX.shape[0])+' sd: '+repr(var))
-s3 = "./Results/NoisyCircles_Test_before_"+repr(testX.shape[0])+"C"+repr(clusters)+"D"+repr(dimensions)+"Bins"+'k'+repr(counter)
+s3 = "./Results/Test_before_"+repr(testX.shape[0])+"C"+repr(clusters)+"D"+repr(dimensions)+"Bins"+'k'+repr(counter)
 plt.savefig(s3)
 plt.cla()
 plt.clf()
 #plt.figure(1)
 plt.scatter(testX[:, 0], testX[:, 1], marker='o', c=predicted_labels, cmap = ('ocean'))
 plt.title('Test set after prediction size: '+repr(testX.shape[0])+'Test Error: '+ repr(TestError)+' sd: '+repr(var))
-s4 = "./Results/NoisyCircles_Test_after_"+repr(testX.shape[0])+"C"+repr(clusters)+"D"+repr(dimensions)+"Bins"+'k'+repr(counter)
+s4 = "./Results/Test_after_"+repr(testX.shape[0])+"C"+repr(clusters)+"D"+repr(dimensions)+"Bins"+'k'+repr(counter)
 plt.savefig(s4)
 plt.cla()
 plt.clf()

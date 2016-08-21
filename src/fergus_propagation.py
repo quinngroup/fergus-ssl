@@ -49,7 +49,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
     Gigantic Image Collections (2009).
     http://eprints.pascal-network.org/archive/00005636/01/ssl-1.pdf
     '''
-    def __init__(self, kernel = 'rbf', k = -1, gamma = None, lagrangian = 10):
+    def __init__(self, kernel = None, k = -1, gamma = None, lagrangian = 10):
         # This doesn't iterate at all, so the parameters are very different
         # from the BaseLabelPropagation parameters.
         self.kernel = kernel
@@ -60,41 +60,37 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
 
 
     def fit(self,X,y=None):
-        self.X_ = X
         self.classes = np.sort(np.unique(y))
-        dim = self.X_.shape[1]
         if self.classes[0] == -1:
             self.classes = np.delete(self.classes, 0) # remove the -1 from this list
             if self.k == -1:
                 self.k = np.size(self.classes)
-        randomizedPCA = pca.RandomizedPCA(n_components=dim)
-        rotatedData = randomizedPCA.fit_transform(self.X_)
+        try:
+            self.pca_data = pca.PCA(n_components=4*self.k)
+            rotatedData = self.pca_data.fit_transform(X)
+        except:
+            print("PCA components should not be less than min(samples, n_features)",sys.exc_info()[0])
+            raise
+        self.X_ = rotatedData
+        dim = self.X_.shape[1]
         '''
         sig = an array to save the k smallest eigenvalues that we get for every p(s)
         g   = a 2d column array to save the k smallest eigenfunctions that we get for every p(s)
         '''
-        numBins = int(np.sqrt(len(rotatedData)))
+        #numBins = int(np.sqrt(len(rotatedData)))
         numBins = self.k
-        print "The gamma is: "+ str(self.gamma)
-        self.sig = np.empty((dim,self.k))
-        self.g = np.empty(((dim,numBins,self.k)))
-        hist = np.empty((dim,numBins))
-        self.b_edgeMeans = np.empty((dim,numBins))
-        self.approxValues = np.empty((dim,self.X_.shape[0]))
-        transformeddata = np.empty((dim,self.X_.shape[0]))
-        self.interpolators=[]
-        #sig=np.array([])
-        #g=np.array([])
+        sig = np.zeros(dim)
+        g = np.zeros((numBins,dim))
+        b_edgeMeans = np.zeros((numBins,dim))
+        self.interpolators = []
         for i in range(dim):
-            histograms,binEdges = np.histogram(rotatedData[:,i],bins=numBins,density=True)
-
+            histograms,binEdges = np.histogram(self.X_[i],bins=numBins,density=True)
             #add 0.01 to histograms and normalize it
             histograms = histograms+ 0.01
             histograms = histograms / np.linalg.norm(histograms)
             #histograms /= histograms.sum()
             # calculating means on the bin edges as the x-axis for the interpolators
-            print "hist shape: "+str(histograms.shape)
-            self.b_edgeMeans[i,:] = np.array([binEdges[j:j + 2].mean() for j in range(binEdges.shape[0] - 1)])
+            b_edgeMeans[:,i] = np.array([binEdges[j:j + 2].mean() for j in range(binEdges.shape[0] - 1)])
             #get D~, P, W~
             '''
             Wdis = Affinity between discrete points.
@@ -104,42 +100,40 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
             Dhat = Diagonal matrix whose diagonal elements are the sum of columns of PW~
             '''
             kernel = "linear"
-            Wdis = self._get_kernel(histograms.reshape(histograms.shape[0],1),y=None,ker="rbf")
+            Wdis = self._get_kernel(histograms.reshape(histograms.shape[0],1),y=None,ker="linear")
             P  = np.diag(histograms)
-            print("Wdis:" + repr(Wdis.shape) + " P: "+ repr(P.shape))
+            #print("Wdis:" + repr(Wdis.shape) + " P: "+ repr(P.shape))
             Ddis = np.diag(np.sum((P.dot(Wdis.dot(P))),axis=0))
             Dhat = np.diag(np.sum(P.dot(Wdis),axis=0))
             #Creating generalized eigenfunctions and eigenvalues from histograms.
             sigmaVals, functions = scipy.linalg.eig((Ddis-(P.dot(Wdis.dot(P)))),(P.dot(Dhat)))
-            #print("eigenValue"+repr(i)+": "+repr(np.real(sigmaVals[0:self.k]))+"Eigenfunctions"+repr(i)+": "+repr(np.real(functions[:,0:self.k])))
-            print str(np.real(sigmaVals)[0:self.k])
-            self.sig[i,:] = np.real(sigmaVals)[0:self.k]
-            self.g[i,:,:] = np.real(functions)[:,0:self.k]
-            hist[i,:] = histograms
-            #interpolate in 1-D
-            self.interpolators.append(ip.interp1d(np.sort(self.b_edgeMeans[i,:]), self.g[i,:, 1]))
-            self.interp = ip.interp1d(self.b_edgeMeans[i,:], self.g[i,:, 1])
+            arg = np.argsort(np.real(sigmaVals))[1]
+            sig[i] = np.real(sigmaVals)[arg]
+            g[:,i] = np.real(functions)[:,arg]
             '''
-            #First check if the original datapoints need to be scaled according to the interpolator ranges
-            if(self.X_[:,i].min() < b_edgeMeans[i].min() or self.X_[:,i].max() > b_edgeMeans[i].max()):
-                ls=[]
-                for num in self.X_[:,i]:
-                    ls.append(((((b_edgeMeans[i,:].max()-0.000001)-b_edgeMeans[i,:].min())*(num - self.X_[:,i].min()))/(self.X_[:,i].max() - self.X_[:,i].min())) + b_edgeMeans[i,:].min())
-                transformeddata[i,:] = np.array(ls)
-                #transformeddata[i,:] = transformer(b_edgeMeans[i].min(), b_edgeMeans[i].max(), self.X_[:,i])
-            else:
-                print("within range")
-                transformeddata[i,:] = np.transpose(self.X_)[i,:]
+            First check if the original datapoints need to be scaled according to the interpolator ranges
             '''
-            transformeddata[i,:] = self.get_transformed_data(self.X_,self.b_edgeMeans,i)
-            self.orig_t = transformeddata
-            #get approximated eigenvectors for all n points using the interpolators
-            self.approxValues[i,:] = self.interpolators[i](transformeddata[i,:])
+        #get approximated eigenvectors for all n points using the interpolators
+        self.newsig = np.zeros(self.k)
+        self.newg = np.zeros((numBins,self.k))
+        self.newEdgeMeans = np.zeros((numBins,self.k))
+        self.transformeddata = np.zeros((self.X_.shape[0],self.k))
+        self.approxValues = np.zeros((self.X_.shape[0],self.k))
+        #selecting the first k eigenvalues and corresponding eigenvectors from all dimensions
+        ind =  np.argsort(sig)[0:self.k]
+        #print ind
+        self.newsig = sig[ind]
+        self.newg = g[:,ind]
+        self.newEdgeMeans = b_edgeMeans[:,ind]
+        for i in range(0,self.k):
+            self.interpolators.append(ip.interp1d(self.newEdgeMeans[:,i], self.newg[:,i]))
+            self.transformeddata[:,i] = self.get_transformed_data(self.X_,self.newEdgeMeans,i)
+            self.approxValues[:,i] = self.interpolators[i](self.transformeddata[:,i])
         # U: k eigenvectors corresponding to smallest eigenvalues. (n_samples by k)
         # S: Diagonal matrix of k smallest eigenvalues. (k by k)
         # V: Diagonal matrix of LaGrange multipliers for labeled data, 0 for unlabeled. (n_samples by n_samples)
-        U = np.transpose(self.approxValues)
-        S = np.diag(self.sig[:,1])
+        U = self.approxValues
+        S = np.diag(self.newsig)
         V = np.diag(np.zeros(np.size(y)))
         labeled = np.where(y != -1)
         V[labeled, labeled] = self.lagrangian
@@ -148,10 +142,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         if np.linalg.det(A) == 0:
             A = A + np.eye(A.shape[1])*0.000001
         b = np.dot(np.dot(U.T, V), y)
-        #print "this is A: "+ str(A)
-        #print "this is b: "+ str(b)
         self.alpha = np.linalg.solve(A, b)
-        print "this is alpha " + str(self.alpha)
         self.labels_ = self.solver(U)
         return self
         #return (sig,g,np.array(interpolators),b_edgeMeans,np.transpose(approxValues))
@@ -159,7 +150,6 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
     def solver(self ,vectors):
         U = vectors
         f = np.dot(U, self.alpha)
-        self.func = f
         f = f.reshape((f.shape[0],-1))
         # Set up a GMM to assign the hard labels from the eigenfunctions.
         g = mixture.GMM(n_components = np.size(self.classes))
@@ -173,24 +163,24 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         return labels_
 
     def predict(self,X,y=None):
-        dim = X.shape[1]
-        self.transformed = np.empty((dim,X.shape[0]))
-        approxVectors = np.empty((dim,X.shape[0]))
-        for i in range(dim):
+        #rotatedData = self.pca_data.fit_transform(X)
+        self.transformed = np.zeros((X.shape[0],self.k))
+        approxVectors = np.zeros((X.shape[0],self.k))
+        for i in range(0,self.k):
             #transform new data
-            self.transformed[i,:] = self.get_transformed_data(X,self.b_edgeMeans,i)
+            self.transformed[:,i] = self.get_transformed_data(X,self.newEdgeMeans,i)
             #get approximated eigenvectors for all n points using the interpolators
-            approxVectors[i,:] = self.interpolators[i](self.transformed[i,:])
-        newlabels = self.solver(np.transpose(approxVectors))
+            approxVectors[:,i] = self.interpolators[i](self.transformed[:,i])
+        newlabels = self.solver(approxVectors)
         return newlabels
 
     def get_transformed_data(self,ori_data,edge_means,i):
-        dim = ori_data.shape[1]
-        transformeddata = np.empty((dim,ori_data.shape[0]))
-        if(ori_data[:,i].min() < edge_means[i].min() or ori_data[:,i].max() > edge_means[i].max()):
+        dim = edge_means.shape[1]
+        transformeddata = np.empty((ori_data.shape[0],dim))
+        if ori_data[:,i].min() < edge_means[:,i].min() or ori_data[:,i].max() > edge_means[:,i].max():
             ls=[]
             for num in ori_data[:,i]:
-                val = (((edge_means[i,:].max()-edge_means[i,:].min())*(num - ori_data[:,i].min()))/(ori_data[:,i].max() - ori_data[:,i].min())) + edge_means[i,:].min()
+                val = (((edge_means[:,i].max()-edge_means[:,i].min())*(num - ori_data[:,i].min()))/(ori_data[:,i].max() - ori_data[:,i].min())) + edge_means[:,i].min()
                 if num==ori_data[:,i].min():
                     val = val + 0.001
                 if num==ori_data[:,i].max():
@@ -200,18 +190,18 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
             #transformeddata[i,:] = transformer(b_edgeMeans[i].min(), b_edgeMeans[i].max(), self.X_[:,i])
         else:
             print("within range")
-            return np.transpose(ori_data)[i,:]
+            return ori_data[:,i]
 
 
     def _get_kernel(self, X, y = None,ker=None):
-        print(ker)
+
         if ker == "rbf":
             if y is None:
                 return pairwise.rbf_kernel(X, X, gamma = self.gamma)
             else:
                 return pairwise.rbf_kernel(X, y, gamma = self.gamma)
         elif ker == "linear":
-            print(ker)
+
             dist = DistanceMetric.get_metric('euclidean')
             if y is None:
                 return pairwise.euclidean_distances(X, X)
