@@ -16,7 +16,7 @@ clusters = int(sys.argv[4])
 dimensions = int(sys.argv[5])
 #numBins = float(sys.argv[6])
 dataX,dataY=datasets.make_blobs(n_samples=size, n_features=dimensions, centers=clusters, cluster_std=var, center_box=(-10.0, 10.0), shuffle=True, random_state=None)
-#dataX,dataY=datasets.make_circles(n_samples=size,random_state=None, factor = 0.1)
+#dataX,dataY=datasets.make_moons(n_samples=size,random_state=None)
 #print dataX.shape
 def labelremover(X,y):
     newX1 = np.around(X,decimals=2)
