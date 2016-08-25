@@ -11,7 +11,7 @@ import operator
 import random
 var = float(sys.argv[1])
 size = int(sys.argv[2])
-gamma = float(sys.argv[3])
+numBins = float(sys.argv[3])
 clusters = int(sys.argv[4])
 dimensions = int(sys.argv[5])
 #numBins = float(sys.argv[6])
@@ -44,7 +44,7 @@ class DefaultListOrderedDict(OrderedDict):
 with open('/home/madhura/Computational_Olfaction/fergus-ssl/src/fergus_propagation.py') as source_file:
     exec(source_file.read())
 
-fp = FergusPropagation(gamma = gamma)
+fp = FergusPropagation(numBins=numBins)
 setdict = DefaultListOrderedDict()
 trainErrDict = OrderedDict()
 testErrDict = OrderedDict()

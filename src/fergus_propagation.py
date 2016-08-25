@@ -49,14 +49,14 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
     Gigantic Image Collections (2009).
     http://eprints.pascal-network.org/archive/00005636/01/ssl-1.pdf
     '''
-    def __init__(self, kernel = None, k = -1, gamma = None, lagrangian = 10):
+    def __init__(self, kernel = None, k = -1,numBins = -1 ,lagrangian = 10):
         # This doesn't iterate at all, so the parameters are very different
         # from the BaseLabelPropagation parameters.
         self.kernel = kernel
         self.k = k
-        self.gamma = gamma
-        #self.n_neighbors = n_neighbors
+        self.numBins = numBins
         self.lagrangian = lagrangian
+
 
 
     def fit(self,X,y=None):
@@ -65,14 +65,10 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
             self.classes = np.delete(self.classes, 0) # remove the -1 from this list
             if self.k == -1:
                 self.k = np.size(self.classes)
+        if self.numBins == -1:
+            self.numBins = self.k
         try:
-            if X.shape[1] >= 4*self.k:
-                nc = 4*self.k
-            elif X.shape[1] >= 2*self.k:
-                nc = 2*self.k
-            else:
-                nc = X.shape[1]
-            self.pca_data = pca.PCA(n_components=nc)
+            self.pca_data = pca.PCA(n_components=X.shape[1])
             rotatedData = self.pca_data.fit_transform(X)
         except:
             print("PCA components should not be less than min(samples, n_features) and more that max(samples, n_features)",sys.exc_info()[0])
@@ -84,17 +80,17 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         newg   = a 2d column array to save the k smallest eigenfunctions that we get for every p(s)
         '''
         #numBins = int(np.sqrt(len(rotatedData)))
-        numBins = self.k
+        numBins = self.numBins
         sig = np.zeros(dim)
         g = np.zeros((numBins,dim))
         b_edgeMeans = np.zeros((numBins,dim))
         self.interpolators = []
         for i in range(dim):
-            histograms,binEdges = np.histogram(self.X_[i],bins=numBins,density=True)
+            histograms,binEdges = np.histogram(self.X_[:,i],bins=numBins,density=True)
             #add 0.01 to histograms and normalize it
             histograms = histograms+ 0.01
             #histograms = histograms / np.linalg.norm(histograms)
-            #histograms /= histograms.sum()
+            histograms /= histograms.sum()
             # calculating means on the bin edges as the x-axis for the interpolators
             b_edgeMeans[:,i] = np.array([binEdges[j:j + 2].mean() for j in range(binEdges.shape[0] - 1)])
             #get D~, P, W~
@@ -173,14 +169,15 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         return labels_
 
     def predict(self,X,y=None):
-        rotatedData = self.pca_data.fit_transform(X)
-        self.transformed = np.zeros((rotatedData.shape[0],self.k))
-        approxVectors = np.zeros((rotatedData.shape[0],self.k))
-        for i in range(0,self.k):
-            #transform new data
-            self.transformed[:,i] = self.get_transformed_data(rotatedData,self.newEdgeMeans,i)
-            #get approximated eigenvectors for all n points using the interpolators
-            approxVectors[:,i] = self.interpolators[i](self.transformed[:,i])
+        #rotatedData = self.pca_data.fit_transform(X)
+        self.transformed = np.zeros((X.shape[0],self.k))
+        approxVectors = np.zeros((X.shape[0],self.k))
+        for point in X:
+            for i in range(0,self.k):
+                #transform new data
+                self.transformed[:,i] = self.get_transformed_data(point,self.newEdgeMeans,i)
+                #get approximated eigenvectors for all n points using the interpolators
+                approxVectors[:,i] = self.interpolators[i](point)
         newlabels = self.solver(approxVectors)
         return newlabels
 
