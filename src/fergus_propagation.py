@@ -67,6 +67,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
                 self.k = np.size(self.classes)
         if self.numBins == -1:
             self.numBins = self.k
+        self.g = mixture.GMM(n_components = np.size(self.classes))
         try:
             self.pca_data = pca.PCA(n_components=X.shape[1])
             rotatedData = self.pca_data.fit_transform(X)
@@ -158,27 +159,28 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         f = np.dot(U, self.alpha)
         f = f.reshape((f.shape[0],-1))
         # Set up a GMM to assign the hard labels from the eigenfunctions.
-        g = mixture.GMM(n_components = np.size(self.classes))
-        g.fit(f)
+        self.g.fit(f)
         #secondEig = self.U_[:,1].reshape((self.U_.shape[0],-1))
         #g.fit(secondEig)
-        labels_ = g.predict(f)
-        means = np.argsort(g.means_.flatten())
+        labels_ = self.g.predict(f)
+        means = np.argsort(self.g.means_.flatten())
         for i in range(0, np.size(labels_)):
             labels_[i] = np.where(means == labels_[i])[0][0]
         return labels_
 
     def predict(self,X,y=None):
-        #rotatedData = self.pca_data.fit_transform(X)
-        self.transformed = np.zeros((X.shape[0],self.k))
-        approxVectors = np.zeros((X.shape[0],self.k))
-        for point in X:
-            for i in range(0,self.k):
-                #transform new data
-                self.transformed[:,i] = self.get_transformed_data(point,self.newEdgeMeans,i)
-                #get approximated eigenvectors for all n points using the interpolators
-                approxVectors[:,i] = self.interpolators[i](point)
-        newlabels = self.solver(approxVectors)
+        newX = self.pca_data.fit_transform(X)
+        approxVec = np.zeros((newX.shape[0],self.k))
+        for p in range(newX.shape[0]):
+            for d in range(0,self.k):
+                val = X[p,d]
+                if val < self.newEdgeMeans[:,d].min():
+                    val = self.newEdgeMeans[:,d].min() + 0.01
+                if val > self.newEdgeMeans[:,d].max():
+                    val = self.newEdgeMeans[:,d].max() - 0.01
+                #transformed[d] = val
+                approxVec[p,d] = self.interpolators[d](val)
+        newlabels = self.solver(approxVec)
         return newlabels
 
     def get_transformed_data(self,ori_data,edge_means,i):
