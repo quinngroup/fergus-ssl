@@ -67,7 +67,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
                 self.k = np.size(self.classes)
         if self.numBins == -1:
             self.numBins = self.k
-        self.g = mixture.GMM(n_components = np.size(self.classes))
+        self.g = mixture.GMM(n_components = np.size(self.classes),n_iter=5000, covariance_type='diag',min_covar=0.0000001)
         try:
             self.pca_data = pca.PCA(n_components=X.shape[1])
             rotatedData = self.pca_data.fit_transform(X)
@@ -150,37 +150,40 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
             A = A + np.eye(A.shape[1])*0.000001
         b = np.dot(np.dot(U.T, V), y)
         self.alpha = np.linalg.solve(A, b)
-        self.labels_ = self.solver(U)
+        efunctions = self.solver(U)
+        # Set up a GMM to assign the hard labels from the eigenfunctions.
+        self.g.fit(efunctions)
+        self.labels_ = self.g.predict(efunctions)
+        self.means = np.argsort(self.g.means_.flatten())
+        for i in range(0, np.size(self.labels_)):
+            self.labels_[i] = np.where(self.means == self.labels_[i])[0][0]
         return self
-        #return (sig,g,np.array(interpolators),b_edgeMeans,np.transpose(approxValues))
 
     def solver(self ,vectors):
         U = vectors
         f = np.dot(U, self.alpha)
         f = f.reshape((f.shape[0],-1))
-        # Set up a GMM to assign the hard labels from the eigenfunctions.
-        self.g.fit(f)
-        #secondEig = self.U_[:,1].reshape((self.U_.shape[0],-1))
-        #g.fit(secondEig)
-        labels_ = self.g.predict(f)
-        means = np.argsort(self.g.means_.flatten())
-        for i in range(0, np.size(labels_)):
-            labels_[i] = np.where(means == labels_[i])[0][0]
-        return labels_
+        return f
 
     def predict(self,X,y=None):
-        newX = self.pca_data.fit_transform(X)
+
+        newX = self.pca_data.transform(X)
         approxVec = np.zeros((newX.shape[0],self.k))
+        allpoints = np.zeros((newX.shape[0],self.k))
+        #Transform all test points into interpolator range
+        for i in range(self.k):
+            allpoints[:,i] = self.get_transformed_data(newX[:,0:self.k], self.newEdgeMeans,i)
+
         for p in range(newX.shape[0]):
+            kpoints = allpoints[p]
             for d in range(0,self.k):
-                val = X[p,d]
-                if val < self.newEdgeMeans[:,d].min():
-                    val = self.newEdgeMeans[:,d].min() + 0.01
-                if val > self.newEdgeMeans[:,d].max():
-                    val = self.newEdgeMeans[:,d].max() - 0.01
-                #transformed[d] = val
+                val = kpoints[d]
                 approxVec[p,d] = self.interpolators[d](val)
-        newlabels = self.solver(approxVec)
+
+        newfunctions = self.solver(approxVec)
+        newlabels = self.g.predict(newfunctions)
+        for i in range(0, np.size(newlabels)):
+            newlabels[i] = np.where(self.means == newlabels[i])[0][0]
         return newlabels
 
     def get_transformed_data(self,ori_data,edge_means,i):
@@ -221,26 +224,3 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
         else:
             raise ValueError("%s is not a valid kernel. Only rbf and knn"
                              " are supported at this time" % self.kernel)
-
-    def _unnormalized_graph_laplacian(self, A, B):
-        '''
-        Calculates the unnormalized graph laplacian L=D-W
-
-        Parameters
-        ----------
-        A : array, shape (n, n)
-            diagonal matrix.
-
-        B : array, shape (n, n)
-            Symmetric affinity matrix.
-
-        Returns
-        -------
-        L : array, shape (n, n)
-            Unnormalized graph laplacian.
-        '''
-        L = None
-
-        L = A - B
-
-        return L
