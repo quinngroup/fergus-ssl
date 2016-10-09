@@ -66,7 +66,7 @@ class FergusPropagation(BaseEstimator, ClassifierMixin):
             if self.k == -1:
                 self.k = np.size(self.classes)
         if self.numBins == -1:
-            self.numBins = self.k
+            self.numBins = self.k + 1
         self.g = mixture.GMM(n_components = np.size(self.classes),n_iter=5000, covariance_type='diag',min_covar=0.0000001)
         try:
             self.pca_data = pca.PCA(n_components=X.shape[1])
