@@ -7,28 +7,32 @@ A Label Propagation semi-supervised clustering algorithm based on the paper "**S
 ```python
 from LabelPropagationDistributed import LabelPropagationDistributed as LPD  
 import numpy as np  
-import matplotlib as plt
-dataX = np.array([[1,1], [2,3], [3,1], [4,10], [5,12], [6,13]])
-dataY = np.array([0,0,0,1,1,1])
-newdataY = np.array([0,-1,-1,-1,-1,1])
-testX = np.array([[1,-1], [3,-0.5],[7,5]])
-testY = np.array([0,0,1])
-dX = sc.parallelize(dataX)
-dy = sc.parallelize(newdataY)
-lpd.fit(dX,dy)
-plabels_ = lpd.predict(sc.parallelize(testX))
-plt.scatter(dataX[:, 0], dataX[:, 1], marker='o', c=dataY, cmap = ('GnBu'))
-plt.show()
-![alt text](https://github.com/quinngroup/fergus-ssl/tree/master/LabelPropagationDistributed/images/trainGT.png "Training Dataset GroundTruth")
-plt.scatter(dataX[:,0], dataX[:,1], marker = 'o', c=np.array(lpd.labels_.collect()), cmap = (('GnBu')))
-plt.show()
-![alt text](https://github.com/quinngroup/fergus-ssl/tree/master/LabelPropagationDistributed/images/trainPredicted.png "Training Dataset Predicted Labels")
-plt.scatter(testX[:, 0], testX[:, 1], marker='o', c=testY, cmap = ('GnBu'))
-plt.show()
-![alt text](https://github.com/quinngroup/fergus-ssl/tree/master/LabelPropagationDistributed/images/testGT.png "Training Dataset GroundTruth")
-plt.scatter(testX[:,0], testX[:,1], c=np.array(plabels_.collect()), cmap = (('GnBu')))
-plt.show()
-![alt text](https://github.com/quinngroup/fergus-ssl/tree/master/LabelPropagationDistributed/images/testPredicted.png "Test Dataset Predicted Labels")
+import matplotlib as plt  
+dataX = np.array([[1,1], [2,3], [3,1], [4,10], [5,12], [6,13]])  
+dataY = np.array([0,0,0,1,1,1])  
+newdataY = np.array([0,-1,-1,-1,-1,1])  
+testX = np.array([[1,-1], [3,-0.5],[7,5]])  
+testY = np.array([0,0,1])  
+dX = sc.parallelize(dataX)  
+dy = sc.parallelize(newdataY)  
+lpd.fit(dX,dy)  
+plabels_ = lpd.predict(sc.parallelize(testX))  
+plt.scatter(dataX[:, 0], dataX[:, 1], marker='o', c=dataY, cmap = ('GnBu'))  
+plt.show()  
+Training Dataset GroundTruth:  
+![alt text](https://github.com/quinngroup/fergus-ssl/blob/master/LabelPropagationDistributed/Images/testGT.png "Training Dataset GroundTruth")  
+plt.scatter(dataX[:,0], dataX[:,1], marker = 'o', c=np.array(lpd.labels_.collect()), cmap = (('GnBu')))  
+plt.show()  
+Training Dataset Predicted Labels:  
+![alt text](https://github.com/quinngroup/fergus-ssl/blob/master/LabelPropagationDistributed/Images/trainPredicted.png "Training Dataset Predicted Labels")  
+plt.scatter(testX[:, 0], testX[:, 1], marker='o', c=testY, cmap = ('GnBu'))  
+plt.show()  
+Training Dataset GroundTruth:  
+![alt text](https://github.com/quinngroup/fergus-ssl/blob/master/LabelPropagationDistributed/Images/testGT.png "Training Dataset GroundTruth")  
+plt.scatter(testX[:,0], testX[:,1], c=np.array(plabels_.collect()), cmap = (('GnBu')))  
+plt.show()  
+Test Dataset Predicted Labels:  
+![alt text](https://github.com/quinngroup/fergus-ssl/blob/master/LabelPropagationDistributed/Images/testPredicted.png "Test Dataset Predicted Labels")  
 ```
 ## Motivation
 
