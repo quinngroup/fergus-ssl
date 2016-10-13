@@ -4,14 +4,32 @@ A Label Propagation semi-supervised clustering algorithm based on the paper "**S
 
 ## Code Example
 
->>> from LabelPropagationDistributed import LabelPropagationDistributed as LPD  
->>> dataX = array([ 5.76961775,  -6.55673209, 11.30752027,  -1.56316985,8.76722337,  -1.54995049, 10.23511359,  -6.20912033,3.49161828,  -3.02917744]).reshape(5,2)  
->>> dataY = array([ 1,  -1,  0, -1, -1])  
->>> test = array([2.1159109 ,   6.03520684,   1.04347698,  -4.44740207,-8.33902404,   4.20918959,   1.38447488,  -1.50363493]).reshape(4,2)  
->>> lpd = LPD(sc=sc, sqlContext = sqlContext, numBins = 5)  
->>> lpd.fit(sc.parallelize(dataX),sc.parallelize(dataY))  
->>> plabels_ = lpd.predict(sc.parallelize(test))  
-
+```python
+from LabelPropagationDistributed import LabelPropagationDistributed as LPD  
+import numpy as np  
+import matplotlib as plt
+dataX = np.array([[1,1], [2,3], [3,1], [4,10], [5,12], [6,13]])
+dataY = np.array([0,0,0,1,1,1])
+newdataY = np.array([0,-1,-1,-1,-1,1])
+testX = np.array([[1,-1], [3,-0.5],[7,5]])
+testY = np.array([0,0,1])
+dX = sc.parallelize(dataX)
+dy = sc.parallelize(newdataY)
+lpd.fit(dX,dy)
+plabels_ = lpd.predict(sc.parallelize(testX))
+plt.scatter(dataX[:, 0], dataX[:, 1], marker='o', c=dataY, cmap = ('GnBu'))
+plt.show()
+![alt text](https://github.com/quinngroup/fergus-ssl/tree/master/LabelPropagationDistributed/images/trainGT.png "Training Dataset GroundTruth")
+plt.scatter(dataX[:,0], dataX[:,1], marker = 'o', c=np.array(lpd.labels_.collect()), cmap = (('GnBu')))
+plt.show()
+![alt text](https://github.com/quinngroup/fergus-ssl/tree/master/LabelPropagationDistributed/images/trainPredicted.png "Training Dataset Predicted Labels")
+plt.scatter(testX[:, 0], testX[:, 1], marker='o', c=testY, cmap = ('GnBu'))
+plt.show()
+![alt text](https://github.com/quinngroup/fergus-ssl/tree/master/LabelPropagationDistributed/images/testGT.png "Training Dataset GroundTruth")
+plt.scatter(testX[:,0], testX[:,1], c=np.array(plabels_.collect()), cmap = (('GnBu')))
+plt.show()
+![alt text](https://github.com/quinngroup/fergus-ssl/tree/master/LabelPropagationDistributed/images/testPredicted.png "Test Dataset Predicted Labels")
+```
 ## Motivation
 
 The idea behind implementing this algorithm was to attempt classification of millions of Olfactory Compounds with only a few labeled compounds making it a semi-supervised problem.
