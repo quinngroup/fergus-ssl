@@ -28,7 +28,7 @@ plt.show()
 
 ```
 Training Dataset GroundTruth:  
-![alt tag](https://github.com/quinngroup/fergus-ssl/blob/master/LabelPropagationDistributed/Images/testGT.png)  
+![alt tag](https://github.com/quinngroup/fergus-ssl/blob/master/LabelPropagationDistributed/Images/trainGT.png)  
 
 Training Dataset Predicted Labels:  
 ![alt tag](https://github.com/quinngroup/fergus-ssl/blob/master/LabelPropagationDistributed/Images/trainPredicted.png)  
