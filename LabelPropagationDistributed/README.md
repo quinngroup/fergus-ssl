@@ -19,20 +19,28 @@ lpd.fit(dX,dy)
 plabels_ = lpd.predict(sc.parallelize(testX))  
 plt.scatter(dataX[:, 0], dataX[:, 1], marker='o', c=dataY, cmap = ('GnBu'))  
 plt.show()  
+
 Training Dataset GroundTruth:  
 ![alt text](https://github.com/quinngroup/fergus-ssl/blob/master/LabelPropagationDistributed/Images/testGT.png "Training Dataset GroundTruth")  
+
 plt.scatter(dataX[:,0], dataX[:,1], marker = 'o', c=np.array(lpd.labels_.collect()), cmap = (('GnBu')))  
 plt.show()  
+
 Training Dataset Predicted Labels:  
 ![alt text](https://github.com/quinngroup/fergus-ssl/blob/master/LabelPropagationDistributed/Images/trainPredicted.png "Training Dataset Predicted Labels")  
+
 plt.scatter(testX[:, 0], testX[:, 1], marker='o', c=testY, cmap = ('GnBu'))  
 plt.show()  
+
 Training Dataset GroundTruth:  
 ![alt text](https://github.com/quinngroup/fergus-ssl/blob/master/LabelPropagationDistributed/Images/testGT.png "Training Dataset GroundTruth")  
+
 plt.scatter(testX[:,0], testX[:,1], c=np.array(plabels_.collect()), cmap = (('GnBu')))  
-plt.show()  
+plt.show()
+
 Test Dataset Predicted Labels:  
 ![alt text](https://github.com/quinngroup/fergus-ssl/blob/master/LabelPropagationDistributed/Images/testPredicted.png "Test Dataset Predicted Labels")  
+
 ```
 ## Motivation
 
