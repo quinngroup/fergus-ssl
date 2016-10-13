@@ -22,11 +22,18 @@ Being a Spark compatible algorithm, millions of Olfactory data can be trained an
 
 ## Installation
 
-Provide code examples and explanations of how to get the project.
+Pre-Requisites needed to be installed:
+Apache Spark 2.0
+Python 2.7.0
+numPy 1.8.2
+sciPy 0.14.1
+sklearn 0.18
+
 
 ## API Reference
 
-Depending on the size of the project, if it is small and simple enough the reference docs can be added to the README. For medium size to larger projects it is important to at least provide a link to where the API reference docs live.
+The proposed algorithm for semi-supervised clustering is based on the paper "Semi-supervised Learning in Gigantic Image Collections" by Fergus, Weiss and Torralba.
+The link to the paper can be found here: https://cs.nyu.edu/~fergus/papers/fwt_ssl.pdf
 
 ## Tests
 
@@ -34,8 +41,4 @@ Describe and show how to run the tests with code examples.
 
 ## Contributors
 
-Let people know how they can dive into the project, include important links to things like issue trackers, irc, twitter accounts if applicable.
-
-## License
-
-A short snippet describing the license (MIT, Apache, etc.)
+https://www.github.com/mgadgil09
