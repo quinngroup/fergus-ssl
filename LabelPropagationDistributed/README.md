@@ -33,7 +33,7 @@ Training Dataset GroundTruth:
 Training Dataset Predicted Labels:  
 ![alt tag](https://github.com/quinngroup/fergus-ssl/blob/master/LabelPropagationDistributed/Images/trainPredicted.png)  
 
-Training Dataset GroundTruth:  
+Test Dataset GroundTruth:  
 ![alt tag](https://github.com/quinngroup/fergus-ssl/blob/master/LabelPropagationDistributed/Images/testGT.png)  
 
 Test Dataset Predicted Labels:  
