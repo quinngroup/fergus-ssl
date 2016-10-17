@@ -7,7 +7,7 @@ A Label Propagation semi-supervised clustering algorithm based on the paper "**S
 ```python
 from LabelPropagationDistributed import LabelPropagationDistributed as LPD  
 import numpy as np  
-import matplotlib as plt  
+import matplotlib.pyplot as plt  
 dataX = np.array([[1,1], [2,3], [3,1], [4,10], [5,12], [6,13]])  
 dataY = np.array([0,0,0,1,1,1])  
 newdataY = np.array([0,-1,-1,-1,-1,1])  
@@ -15,6 +15,7 @@ testX = np.array([[1,-1], [3,-0.5],[7,5]])
 testY = np.array([0,0,1])  
 dX = sc.parallelize(dataX)  
 dy = sc.parallelize(newdataY)  
+lpd = LPD(sc=sc, sqlContext= sqlContext)
 lpd.fit(dX,dy)  
 plabels_ = lpd.predict(sc.parallelize(testX))  
 plt.scatter(dataX[:, 0], dataX[:, 1], marker='o', c=dataY, cmap = ('GnBu'))  
