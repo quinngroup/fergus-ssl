@@ -1,1 +1,1 @@
-from LabelPropagationDistributed.LabelPropagationDistributed import LabelPropagationDistributed
+from .LabelPropagationDistributed import LabelPropagationDistributed
