@@ -52,7 +52,17 @@ Python 2.7.0
 numPy 1.8.2  
 sciPy 0.14.1  
 sklearn 0.18  
+Once you download the zipped folder, it will contain 2 different implementations. choose the one which you want
+to use and then run the setup.py file.
+To use the algorithm, download the folder and run the setup.py
+NOTE: This is not a published package hence it is required to be downloaded.
+```
+wget https://github.com/quinngroup/fergus-ssl/archive/master.zip -O fergus-ssl.zip
+unzip -q fergus-ssl.zip
+cd fergus-ssl-master/
+python setup.py clean build install
 
+```
 
 ## API Reference
 
