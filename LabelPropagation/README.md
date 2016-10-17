@@ -2,6 +2,25 @@
 
 A Label Propagation semi-supervised clustering algorithm based on the paper "**Semi-supervised Learning in Gigantic Image Collections**" by Fergus, Weiss and Torralba.  
 
+## Installation
+
+Pre-Requisites needed to be installed:  
+Python 2.7.0  
+numPy 1.8.2  
+sciPy 0.14.1  
+sklearn 0.18  
+Once you download the zipped folder, it will contain 2 different implementations. Choose the one which you want
+to use and then run the setup.py file.  
+To use the algorithm, download the folder and run the setup.py  
+NOTE: This is not a published package hence it is required to be downloaded.  
+```
+wget https://github.com/quinngroup/fergus-ssl/archive/master.zip -O fergus-ssl.zip
+unzip -q fergus-ssl.zip
+cd fergus-ssl-master/LabelPropagation
+python setup.py clean build install
+
+```
+
 ## Code Example
 
 ```python
@@ -42,27 +61,6 @@ Test Dataset Predicted Labels:
 The idea behind implementing this algorithm was to attempt classification of millions of Olfactory Compounds with only a few labeled compounds making it a semi-supervised problem.
 To come up with a scalable Apache Spark compatible algorithm which can handle millions of data, a stand-alone version of the same was required which would later be used to create
 the distributed one.
-
-
-## Installation
-
-Pre-Requisites needed to be installed:  
-Python 2.7.0  
-numPy 1.8.2  
-sciPy 0.14.1  
-sklearn 0.18  
-Once you download the zipped folder, it will contain 2 different implementations. Choose the one which you want
-to use and then run the setup.py file.  
-To use the algorithm, download the folder and run the setup.py  
-NOTE: This is not a published package hence it is required to be downloaded.  
-```
-wget https://github.com/quinngroup/fergus-ssl/archive/master.zip -O fergus-ssl.zip
-unzip -q fergus-ssl.zip
-cd fergus-ssl-master/LabelPropagation
-python setup.py clean build install
-
-```
-
 
 ## API Reference
 
