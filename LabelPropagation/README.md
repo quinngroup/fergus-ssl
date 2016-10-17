@@ -17,7 +17,7 @@ NOTE: This is not a published package hence it is required to be downloaded.
 wget https://github.com/quinngroup/fergus-ssl/archive/master.zip -O fergus-ssl.zip
 unzip -q fergus-ssl.zip
 cd fergus-ssl-master/LabelPropagation
-python setup.py clean build install
+sudo python setup.py clean build install
 
 ```
 
@@ -40,7 +40,9 @@ plt.show()
 plt.scatter(dataX[:,0], dataX[:,1], marker = 'o', c=np.array(lp.labels_), cmap = (('GnBu')))  
 plt.show()  
 plt.scatter(testX[:, 0], testX[:, 1], marker='o', c=testY, cmap = ('GnBu'))  
-plt.show()  
+plt.show() 
+plt.scatter(testX[:, 0], testX[:, 1], marker='o', c=plabels_, cmap = ('GnBu'))  
+plt.show() 
 plt.scatter(testX[:,0], testX[:,1], c=np.array(plabels_), cmap = (('GnBu')))  
 plt.show()
 
