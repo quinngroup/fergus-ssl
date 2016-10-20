@@ -5,10 +5,11 @@ A Label Propagation semi-supervised clustering algorithm based on the paper "**S
 ## Installation
 
 Pre-Requisites needed to be installed:  
-Python 2.7.0  
-numPy 1.8.2  
-sciPy 0.14.1  
-sklearn 0.18  
+ - Python 2.7.0  
+ - NumPy 1.8.2  
+ - SciPy 0.14.1  
+ - scikit-learn 0.18
+
 Once you download the zipped folder, it will contain 2 different implementations. Choose the one which you want
 to use and then run the setup.py file.  
 To use the algorithm, download the folder and run the setup.py  
