@@ -177,7 +177,6 @@ class LabelPropagation():
     def transformer(self,rotatedData):
         """
         Interpolate and return approximate Eigenvectors
-        Runs on workers
 
         :param: rotatedData:
             Data to be transformed to fit into the boundaries of the interpolator
