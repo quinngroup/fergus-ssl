@@ -308,7 +308,9 @@ class LabelPropagationDistributed():
         """
         A generalized Eigen Solver that gives approximate eigenfunctions and eigenvalues.
         Based on Eqn. 2 in the paper.
-
+        NOTE: The first eigenfunction is always going to be a trivial function with maximal smoothness.
+              Hence selecting eigenvalue at index 1 instead of 0.
+              
         :params: histograms:
             Discretized data whose eigenfunctions and eigenvalues are to be evaluated.
 
