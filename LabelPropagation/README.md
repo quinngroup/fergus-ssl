@@ -77,3 +77,4 @@ Describe and show how to run the tests with code examples.
 ## Contributors
 
 https://www.github.com/mgadgil09  
+https://github.com/magsol  
