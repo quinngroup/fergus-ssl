@@ -1,0 +1,60 @@
+============k: 2 bins: 2=============
+precision is: 1.0
+recall is: 1.0
+f1 measure: 1.0
+============k: 2 bins: 3=============
+precision is: 0.999017681729
+recall is: 1.0
+f1 measure: 0.999508599509
+============k: 2 bins: 4=============
+precision is: 1.0
+recall is: 0.993117010816
+f1 measure: 0.996546620622
+============k: 2 bins: 5=============
+precision is: 1.0
+recall is: 0.998033431662
+f1 measure: 0.999015748031
+============k: 2 bins: 2=============
+precision is: 1.0
+recall is: 1.0
+f1 measure: 1.0
+============k: 2 bins: 2=============
+precision is: 1.0
+recall is: 1.0
+f1 measure: 1.0
+============k: 20 bins: 20=============
+precision is: 0.506920415225
+recall is: 0.576204523107
+f1 measure: 0.539346525541
+============k: 5 bins: 20=============
+precision is: 0.511591962906
+recall is: 0.976401179941
+f1 measure: 0.67139959432
+============k: 10 bins: 20=============
+precision is: 0.506884242733
+recall is: 0.97738446411
+f1 measure: 0.66756212223
+============k: 15 bins: 20=============
+precision is: 0.506639427988
+recall is: 0.975417895772
+f1 measure: 0.666890756303
+============k: 8 bins: 8=============
+precision is: 0.502457673403
+recall is: 0.904621435595
+f1 measure: 0.64606741573
+
+==================================================================
+Pairwise Component Angles for original data:
+angle between 0 and 1 is: 82.1629418323
+angle between 1 and 2 is: 134.902198282
+angle between 2 and 3 is: 67.3382320638
+angle between 3 and 4 is: 156.834794905
+
+Pairwise Component Angles after PCA:
+angle between 0 and 1 is: 77.9977567045
+angle between 1 and 2 is: 167.487238026
+angle between 2 and 3 is: 115.594242644
+angle between 3 and 4 is: 114.798287644
+
+
+
