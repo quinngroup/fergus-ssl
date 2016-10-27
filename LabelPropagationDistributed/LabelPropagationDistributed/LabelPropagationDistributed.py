@@ -203,7 +203,7 @@ class LabelPropagationDistributed():
 
         """
 
-        gaussians = np.zeros((self.k,1))
+        gaussians = np.zeros((self.numClasses,1))
         i=0
         for ls in self.gmm.gaussians:
             gaussians[i] = (ls.mu)
@@ -415,6 +415,7 @@ class LabelPropagationDistributed():
             raise ValueError("y cannot be None")
 
         n,classes = self.getParams(X, y)
+        self.numClasses = np.size(classes)
         rotatedData = self.rotate(X)
         dictData = self.makeDF(rotatedData, self.dimensions)
         newsig,self.newg,self.newEdgeMeans = self.getKSmallest(dictData)
