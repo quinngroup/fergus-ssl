@@ -265,7 +265,8 @@ class LabelPropagationDistributed():
         if self.numBins == -1:
                 self.numBins = self.k + 1
         if self.k > self.dimensions:
-            raise ValueError("k cannot be more than the number of features")
+            self.k = self.dimensions
+            #raise ValueError("k cannot be more than the number of features")
         return (n,classes)
 
     def rotate(self, X):
