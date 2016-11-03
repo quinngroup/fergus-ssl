@@ -19,7 +19,7 @@ NOTE: This is not a published package hence it is required to be downloaded.
 wget https://github.com/quinngroup/fergus-ssl/archive/master.zip -O fergus-ssl.zip
 unzip -q fergus-ssl.zip
 cd fergus-ssl-master/LabelPropagationDistributed
-sudo python setup.py clean build install
+python setup.py clean build install
 
 ```
 
