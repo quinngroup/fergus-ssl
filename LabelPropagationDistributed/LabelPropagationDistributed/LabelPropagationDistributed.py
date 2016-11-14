@@ -65,7 +65,7 @@ class LabelPropagationDistributed():
     global bc_newg
     global kb
 
-    def __init__(self, sc = None, sqlContext = None,  k = -1,numBins = -1 ,lagrangian = 1000, gamma = 0.01):
+    def __init__(self, sc = None, sqlContext = None,  k = -1,numBins = -1 ,lagrangian = 1000, gamma = 0.5):
 
         self.k = k
         self.numBins = numBins
