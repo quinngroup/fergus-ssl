@@ -6,14 +6,14 @@ from sklearn import decomposition
 from scipy import interpolate as ip
 from scipy.linalg import eig
 import sklearn.mixture as mixture
-
+from sklearn.cluster import KMeans
 class LabelPropagation():
     """
     A Label Propagation semi-supervised clustering algorithm based
     on the paper "Semi-supervised Learning in Gigantic Image Collections"
     by Fergus, Weiss and Torralba.
-    The algorithm begins with discretizing the datapoints into 1-D histograms.
-    For each independent dimension, it approximates the density using the histogram
+    The algorithm begins with discretizing the datapoints into 1-D ams.
+    For each independent dimension, it approximates the density using the am
     and solves numerically for eigenfunctions and eigenvalues.
     Then it uses the k eigenfunctions for k smallest eigenvalues to do a 1-D
     interpolation of every data point.
@@ -42,18 +42,19 @@ class LabelPropagation():
     >>> plabels_ = lp.predict(testX)
     """
 
-    def __init__(self, kernel = None, k = -1,numBins = -1 ,lagrangian = 10):
+    def __init__(self, kernel = None, k = -1,numBins = -1 ,lagrangian = 1000, gamma = 0.2):
 
         self.k = k
         self.numBins = numBins
         self.lagrangian = lagrangian
+        self.gamma = gamma
 
     def getParams(self,X,y):
         """
         Get all necessary parameters like total number of dimensions,
         desired number of dimensions to work on k,
         number of classes based on the labeled data available,
-        number of histogram bins and total data points n.
+        number of am bins and total data points n.
 
         :param: X
             Data points
@@ -101,29 +102,35 @@ class LabelPropagation():
             Original data
         """
 
-        histograms,binEdges = np.histogram(X_[:,i],bins=self.numBins,density=True)
-        histograms = histograms+ 0.01
+        histograms,binEdges = np.histogram(X_[:,i],bins=self.numBins,density=False)
+        histograms = histograms+ 0.1
         histograms /= histograms.sum()
+        #print histograms
         return(histograms,binEdges)
 
-    def generalizedEigenSolver(self,histograms):
+    def generalizedEigenSolver(self,binmeans, histograms):
         """
         A generalized Eigen Solver that gives approximate eigenfunctions and eigenvalues.
         Based on Eqn. 2 in the paper.
-        NOTE: The first eigenfunction is always going to be a trivial function with maximal smoothness.
-              Hence selecting eigenvalue at index 1 instead of 0.
 
         :params: histograms:
             Discretized data whose eigenfunctions and eigenvalues are to be evaluated.
         """
 
-        Wdis = self._get_kernel(histograms.reshape(histograms.shape[0],1),y=None,ker="linear")
-        P  = np.diag(histograms)
-        Ddis = np.diag(np.sum((P.dot(Wdis.dot(P))),axis=0))
-        Dhat = np.diag(np.sum(P.dot(Wdis),axis=0))
-        sigmaVals, functions = eig((Ddis-(P.dot(Wdis.dot(P)))),(P.dot(Dhat)))
-        arg = np.argsort(np.real(sigmaVals))[1]
-        return (np.real(sigmaVals)[arg], np.real(functions)[:,arg])
+        Wdis = self._get_kernel(binmeans.reshape(binmeans.shape[0],1),y=None,ker="rbf") #
+        P  = np.diag(histograms).astype('float32')
+        PW = np.dot(P,Wdis)
+        PWP = np.dot(PW,P)
+        Ddis = np.diag(np.sum(PWP,axis=0))
+        Dhat = np.diag(np.sum(PW,axis=0))
+        L = Ddis - PWP
+        IP = np.linalg.inv(np.sqrt(P.dot(Dhat)))
+        L2 = IP.dot(L).dot(IP)
+        uu,ss,vv = np.linalg.svd(L2)
+        g = IP.dot(uu)
+        s = np.diag(g.T.dot(L).dot(g))/np.diag(g.T.dot(P).dot(Dhat).dot(g))
+        return s,g
+
 
     def getKSmallest(self,X_):
         """
@@ -132,23 +139,26 @@ class LabelPropagation():
             Data points with independent components
         """
 
-        sig = np.zeros(self.dimensions)
-        gee = np.zeros((self.numBins,self.dimensions))
+        eigvals = np.zeros((self.numBins, self.dimensions))
+        eigvecs = np.zeros(((self.numBins, self.numBins, self.dimensions)))
         b_edgeMeans = np.zeros((self.numBins,self.dimensions))
-        #self.interpolators = []
 
         for i in range(self.dimensions):
             histograms, binEdges = self.approximateDensities(i, X_)
             b_edgeMeans[:,i] = np.array([binEdges[j:j + 2].mean() for j in range(binEdges.shape[0] - 1)])
-            sig[i],gee[:,i] = self.generalizedEigenSolver(histograms)
+            eigvals[:,i], eigvecs[:,:,i] = self.generalizedEigenSolver(b_edgeMeans[:,i], histograms)
 
+        all_evals = eigvals.flatten()
+        smalls = np.where(all_evals < 1e-10)
+        all_evals[smalls] = 1e10
+        ind =  np.argsort(all_evals)
+        k_ind = ind[0:self.k]
+        self.kind = k_ind
+        useful_evals = np.diag(all_evals[k_ind])
+        self.ii,self.jj = np.unravel_index(k_ind, eigvals.shape)
+        evectors = np.column_stack([eigvecs[:,self.ii[a],self.jj[a]] for a in range(self.k)])
+        return (useful_evals, evectors, b_edgeMeans[:,self.jj])
 
-        if np.isnan(np.min(sig)):
-            nan_num = np.isnan(sig)
-            sig[nan_num] = 0
-
-        ind =  np.argsort(sig)[0:self.k]
-        return (sig[ind],gee[:,ind], b_edgeMeans[:,ind])
 
     def get_transformed_data(self,ori_data,edge_means,i):
         """
@@ -160,25 +170,15 @@ class LabelPropagation():
         :params: edge_means:
             Fit original data to boundaries of the histogram bins edges
         """
-
-        dim = edge_means.shape[1]
-        transformeddata = np.empty((ori_data.shape[0],dim))
-        if ori_data[:,i].min() < edge_means[:,i].min() or ori_data[:,i].max() > edge_means[:,i].max():
-            ls=[]
-            for num in ori_data[:,i]:
-                val = (((edge_means[:,i].max()-edge_means[:,i].min())*(num - ori_data[:,i].min()))/(ori_data[:,i].max() - ori_data[:,i].min())) + edge_means[:,i].min()
-                if num==ori_data[:,i].min():
-                    val = val + 0.001
-                if num==ori_data[:,i].max():
-                    val = val - 0.001
-                ls.append(val)
-            return np.array(ls)
-        else:
-            return ori_data[:,i]
+        ind = self.jj[i]
+        Lower, Upper = np.percentile(ori_data[:,ind], [2.5,97.5])
+        transformeddata = np.clip(ori_data[:,ind],Lower, Upper)
+        return transformeddata
 
     def transformer(self,rotatedData):
         """
         Interpolate and return approximate Eigenvectors
+        Runs on workers
 
         :param: rotatedData:
             Data to be transformed to fit into the boundaries of the interpolator
@@ -187,11 +187,40 @@ class LabelPropagation():
         self.interpolators = []
         transformeddata = np.zeros((rotatedData.shape[0],self.k))
         approxValues = np.zeros((rotatedData.shape[0],self.k))
+
         for i in range(0,self.k):
-            self.interpolators.append(ip.interp1d(self.newEdgeMeans[:,i], self.newg[:,i]))
+            self.interpolators.append(ip.interp1d(self.newEdgeMeans[:,i], self.newg[:,i], fill_value = 'extrapolate', kind = 'linear'))
             transformeddata[:,i] = self.get_transformed_data(rotatedData,self.newEdgeMeans,i)
             approxValues[:,i] = self.interpolators[i](transformeddata[:,i])
+
+        approxValues /= np.sum(approxValues**2, axis=0).astype('float32')
         return approxValues
+
+    def getVectors(self, newX,n):
+        """
+        For each new point, interpolate a single point and return its approximate eigen vector.
+        This makes the algorithm inductive.
+
+        :params: newX:
+            Data point/points with independent components
+
+        :params: n:
+            size of data points
+        """
+
+        approxVec = np.zeros((n,self.k))
+        allpoints = np.zeros((n,self.k))
+        for i in range(0,self.k):
+            allpoints[:,i] = self.get_transformed_data(newX, self.newEdgeMeans,i)
+            approxVec[:,i] = self.interpolators[i](allpoints[:,i])
+        #for p in range(n):
+        #    kpoints = allpoints[p]
+        #    for d in range(0,self.k):
+        #        val = kpoints[d]
+        #        approxVec[p,d] = self.interpolators[d](val)
+        approxVec /= np.sum(approxVec**2, axis=0).astype('float32')
+        return approxVec
+
 
     def getAlpha(self,approxValues ,y ,n ,newsig):
         """
@@ -212,19 +241,22 @@ class LabelPropagation():
         """
 
         U = approxValues
-        S = np.diag(newsig)
+        S = newsig
         V = np.diag(np.zeros(n))
         labeled = np.where(y != -1)
+        print labeled
         V[labeled, labeled] = self.lagrangian
         # Solve for alpha and use it to compute the eigenfunctions, f.
         A = S + np.dot(np.dot(U.T, V), U)
         if np.linalg.det(A) == 0:
             A = A + np.eye(A.shape[1])*0.000001
-        b = np.dot(np.dot(U.T, V), y)
+        b = np.dot(np.dot(U.T, V), y+1)
+        self.V = V
+        self.yy = y+1
         alpha = np.linalg.solve(A, b)
         return alpha
 
-    def relabel(self,labels):
+    def relabel(self,labels, km):
         """
         Label the data points in an ordered way depending on the ascending
         order of the gaussian means.
@@ -232,12 +264,12 @@ class LabelPropagation():
         :param: labels:
             GMM predicted labels
         """
-        means = np.argsort(self.gmm.means_.flatten())
+        means = np.argsort(km.cluster_centers_.flatten())
         for i in range(0, np.size(labels)):
             labels[i] = np.where(means == labels[i])[0][0]
         return labels
 
-    def solver(self ,vectors):
+    def solver(self ,vectors, alpha):
         """
         f =  U * alpha
         Get and return approximate eigenvectors from eigenfunctions using alpha.
@@ -247,7 +279,7 @@ class LabelPropagation():
         """
 
         U = vectors
-        f = np.dot(U, self.alpha)
+        f = np.dot(U, alpha)
         f = f.reshape((f.shape[0],-1))
         return f
 
@@ -267,9 +299,9 @@ class LabelPropagation():
 
         if ker == "rbf":
             if y is None:
-                return pairwise.rbf_kernel(X, X, gamma = 625)
+                return pairwise.rbf_kernel(X, X, gamma = self.gamma)
             else:
-                return pairwise.rbf_kernel(X, y, gamma = 625)
+                return pairwise.rbf_kernel(X, y, gamma = self.gamma)
 
         elif ker == "linear":
             if y is None:
@@ -290,40 +322,23 @@ class LabelPropagation():
         """
         if y is None:
             raise ValueError("y cannot be None")
-        n,classes = self.getParams(X,y)
+        n,self.classes = self.getParams(X,y)
+        self.labeledX = X[np.where(y !=-1)]
+        self.labeledy = y[np.where(y!=-1)]
         rotatedData = self.rotate(X)
-        newsig,self.newg,self.newEdgeMeans = self.getKSmallest(rotatedData)
+        self.newsig, self.newg, self.newEdgeMeans = self.getKSmallest(rotatedData)
         approxValues = self.transformer(rotatedData)
-        self.alpha = self.getAlpha(approxValues, y, n, newsig)
-        efunctions = self.solver(approxValues)
-        self.gmm = mixture.GMM(n_components = np.size(classes),n_iter=5000, covariance_type='diag',min_covar=0.0000001)
-        self.gmm.fit(efunctions)
-        labels = self.gmm.predict(efunctions)
-        self.labels_ = self.relabel(labels)
+        self.interpolated = approxValues
+        self.alpha = self.getAlpha(approxValues, y, n, self.newsig)
+        efunctions = self.solver(approxValues,self.alpha)
+        self.smooth_functions = efunctions
+        #self.gmm = mixture.GMM(n_components = np.size(self.classes),n_iter=5000, covariance_type='diag',min_covar=0.0000001)
+        #self.gmm.fit(efunctions)
+        #labels = self.gmm.predict(efunctions)
+        self.kmeans = KMeans(n_clusters=np.size(self.classes), random_state=0, max_iter = 2000).fit(efunctions)
+        labels = self.kmeans.predict(efunctions)
+        self.labels_ = self.relabel(labels, self.kmeans)
         return self
-
-    def getVectors(self, newX,n):
-        """
-        For each new point, interpolate a single point and return its approximate eigen vector.
-        This makes the algorithm inductive.
-
-        :params: newX:
-            Data point/points with independent components
-
-        :params: n:
-            size of data points
-        """
-
-        approxVec = np.zeros((n,self.k))
-        allpoints = np.zeros((n,self.k))
-        for i in range(self.k):
-            allpoints[:,i] = self.get_transformed_data(newX[:,0:self.k], self.newEdgeMeans,i)
-        for p in range(n):
-            kpoints = allpoints[p]
-            for d in range(0,self.k):
-                val = kpoints[d]
-                approxVec[p,d] = self.interpolators[d](val)
-        return approxVec
 
     def predict(self,X,y=None):
         """
@@ -335,11 +350,18 @@ class LabelPropagation():
         :params: y:
             Ground Truth for data points. Label array
         """
-
+        y = np.array([-1] * len(X) + self.labeledy.tolist())
+        X = np.array(X.tolist() + self.labeledX.tolist())
         newX = self.pca.transform(X)
-        n = newX.shape[0]
-        approxVec = self.getVectors(newX,n)
-        newfunctions = self.solver(approxVec)
-        newlabels = self.gmm.predict(newfunctions)
-        predictedLabels = self.relabel(newlabels)
-        return predictedLabels
+        self.n = newX.shape[0]
+        approxVec = self.getVectors(newX,self.n)
+        testAlpha = self.getAlpha(approxVec, y, self.n, self.newsig)
+        newfunctions = self.solver(approxVec, testAlpha)
+        self.func = newfunctions
+        self.talpha = testAlpha
+        #gmm = mixture.GMM(n_components = np.size(self.classes),n_iter=5000, covariance_type='diag',min_covar=0.0000001)
+        #newlabels = self.gmm.predict(newfunctions)
+        kmeans = KMeans(n_clusters=np.size(self.classes), random_state=0, max_iter = 2000).fit(newfunctions)
+        kpredicted =kmeans.predict(newfunctions)
+        predictedLabels = self.relabel(kpredicted, kmeans)
+        return predictedLabels[:-len(self.labeledy)]
