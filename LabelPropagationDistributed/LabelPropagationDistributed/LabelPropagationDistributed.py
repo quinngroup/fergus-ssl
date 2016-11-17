@@ -1,4 +1,5 @@
 # coding: utf-8
+# coding: utf-8
 import numpy as np
 
 from numpy.core.numeric import array
@@ -19,6 +20,8 @@ from pyspark.mllib.feature import PCA as PCAmllib
 from pyspark.sql.types import *
 from pyspark.mllib.clustering import GaussianMixture
 from pyspark.ml.clustering import GaussianMixture as gmmml
+from pyspark.mllib.clustering import KMeans
+from pyspark.ml.clustering import KMeans as kmml
 
 class LabelPropagationDistributed():
     """
@@ -65,7 +68,7 @@ class LabelPropagationDistributed():
     global bc_newg
     global kb
 
-    def __init__(self, sc = None, sqlContext = None,  k = -1,numBins = -1 ,lagrangian = 1000, gamma = 0.5):
+    def __init__(self, sc = None, sqlContext = None,  k = -1,numBins = -1 ,lagrangian = 1000, gamma = 0.01):
 
         self.k = k
         self.numBins = numBins
@@ -126,7 +129,7 @@ class LabelPropagationDistributed():
             Lower, Upper = np.percentile(tmp, [2.5,97.5])
             dataBounds[i] = (Lower,Upper)
         return dataBounds
-
+        
     def transformer(vec, bounds, bc_EdgeMeans, bc_newg, kb):
         """
         Interpolate and return data points
@@ -167,7 +170,7 @@ class LabelPropagationDistributed():
 
         return IndexedRowMatrix(irm.zipWithIndex().map(lambda x:IndexedRow(x[1],x[0])))
 
-    def solver(self,functions):
+    def solver(self,functions, alpha):
         """
         f = U * alpha
         Get and return approximate eigenvectors from eigenfunctions using alpha.
@@ -177,7 +180,7 @@ class LabelPropagationDistributed():
         """
 
         U = functions
-        alpha_bc = self.sc.broadcast(self.alpha.reshape(self.k,1))
+        alpha_bc = self.sc.broadcast(alpha.reshape(self.k,1))
         f = U.rows.map(lambda row: (row.index, np.dot(row.vector.toArray(), alpha_bc.value)))
         return f
 
@@ -198,7 +201,7 @@ class LabelPropagationDistributed():
         newddict = { i: ddict[str(i)] for i in desired_keys }
         return newddict
 
-    def relabel(self,ilabels):
+    def relabel(self,ilabels, km):
         """
         Label the data points in an ordered way depending on the ascending
         order of the gaussian means.
@@ -213,8 +216,9 @@ class LabelPropagationDistributed():
         #for ls in self.gmm.gaussians:
         #    gaussians[i] = (ls.mu)
         #    i = i +1
-        gaussians = np.array(self.gmodel.gaussiansDF.select('mean').rdd.map(lambda r: r[0].toArray()).collect()).flatten()
-        distmeans = self.sc.broadcast(np.argsort(gaussians.flatten()))
+        #gaussians = np.array(gmodel.gaussiansDF.select('mean').rdd.map(lambda r: r[0].toArray()).collect()).flatten()
+        means = np.array(km.clusterCenters())
+        distmeans = self.sc.broadcast(np.argsort(means.flatten()))
         ilabels = ilabels.select(["idd","prediction"]).rdd.map(lambda row: (row.idd, np.where(distmeans.value == row.prediction)[0][0]))
         return ilabels
 
@@ -458,8 +462,11 @@ class LabelPropagationDistributed():
             raise ValueError("y cannot be None")
 
 
-        n,classes = self.getParams(X, y)
+        self.n,classes = self.getParams(X, y)
         self.numClasses = np.size(classes)
+        labeledPoints = self.sc.broadcast(y.filter(lambda (i,v): v!=-1).map(lambda (i,v): i).collect())
+        self.labeledX = X.filter(lambda (i,vec): i in labeledPoints.value).map(lambda (a,b): b)
+        self.labeledy = y.filter(lambda (i,v): v!=-1).map(lambda (a,b): b)
         rotatedData = self.rotate(X)
         dictData = self.makeDF(rotatedData, self.dimensions)
         self.newsig, self.newg, self.newEdgeMeans = self.getKSmallest(dictData)
@@ -473,18 +480,17 @@ class LabelPropagationDistributed():
         sos = self.sc.broadcast(np.array(sorted(sumofSquares, key = lambda x: x[0]))[:,1])
         norm_approxValues = IndexedRowMatrix(approxValues.rows.map(lambda irow: IndexedRow(irow.index,np.divide(np.array(irow.vector, dtype = 'float32'), np.array(sos.value, dtype = 'float32')))))
         self.interpolated = norm_approxValues
-        self.alpha = self.getAlpha(norm_approxValues, y, n, self.newsig)
-        efunctions = self.solver(norm_approxValues)
+        self.alpha = self.getAlpha(norm_approxValues, y, self.n, self.newsig)
+        efunctions = self.solver(norm_approxValues, self.alpha)
         efunctions = efunctions.map(lambda (ind,val):(ind,mlvec.dense([val]))).toDF(schema = ("idd","features"))
-        self.gmm = gmmml(featuresCol="features", predictionCol="prediction", k=np.size(classes), probabilityCol="probability", tol=0.0000001, maxIter=5000)
-        self.gmodel = self.gmm.fit(efunctions)
-        #self.gmodel.gaussiansDF.show()
-        self.efunctions = efunctions
-        labeled=self.gmodel.transform(efunctions)
-        self.labels_ = self.relabel(labeled)
-        self.centroids = self.gmodel.gaussiansDF.rdd.zipWithIndex().map(lambda (x,i):(i,x.mean.toArray()[0])).collect()
-        relabelDict ={currentLabel[0]:newLabel  for newLabel,currentLabel in enumerate(sorted(self.centroids,key = lambda x : x[1]))}
-        self.final = self.labels_.map(lambda (i,row): (i, relabelDict[row]))
+        #self.gmm = gmmml(featuresCol="features", predictionCol="prediction", k=np.size(classes), probabilityCol="probability", tol=0.0000001, maxIter=5000)
+        #self.gmodel = self.gmm.fit(efunctions)
+        #self.efunctions = efunctions
+        #labeled=self.gmodel.transform(efunctions)
+        self.kmeans = kmml(featuresCol="features",predictionCol="prediction", k= np.size(classes), initMode="k-means||",initSteps=10, tol=1e-4, maxIter=2000, seed=0)
+        self.kmodel = self.kmeans.fit(efunctions)
+        labeled=self.kmodel.transform(efunctions)
+        self.labels_ = self.relabel(labeled, self.kmodel)
         return self
 
     def predict(self, X,y=None):
@@ -499,23 +505,31 @@ class LabelPropagationDistributed():
             Ground Truth for data points. RDD of Label array
 
         """
-
+        oldn = X.count()
+        minusOnes = self.sc.parallelize(np.array([-1] * oldn))
+        y =  (minusOnes + self.labeledy).zipWithIndex().map(lambda (a,b): (b,a))
+        lpoints = self.labeledy.count()
+        X = (X.map(lambda (i,v): v) + self.labeledX).zipWithIndex().map(lambda (a,b): (b,a))
+        newn = X.count()
+        XforPCA = X.map(lambda (ind,vec): (int(ind),mlvec.dense(vec))).toDF(schema = ('idd','features'))
+        rotatedData = self.PCA.transform(XforPCA)
+        rotatedData=rotatedData.select(["idd", "pcaFeatures"]).rdd.map(lambda r: (r.idd,r.pcaFeatures.toArray()))
+        dictData = self.makeDF(rotatedData, self.dimensions)
         bc_EdgeMeans, bc_newg, kb = self.broadcaster()
-        newX = X.map(lambda (ind,vec): (int(ind),mlvec.dense(vec))).toDF(schema = ('idd','features'))
-        testXforPCA = self.PCA.transform(newX)
-        testdf = self.makeDF(testXforPCA, self.dimensions)
-        testdatabounds = self.sc.broadcast(self.getdataboundaries(testdf, self.k))
-        useful_data = testdf.select(['idd']+[str(i+1) for i in self.jj])
+        dataBounds = self.sc.broadcast(self.getdataboundaries(dictData, self.k))
+        useful_data = dictData.select(['idd']+[str(i+1) for i in self.jj])
         jj = self.sc.broadcast(self.jj)
         useful_dataRDD = useful_data.rdd.map(lambda rw: (int(rw['idd']), [rw[str(i+1)] for i in jj.value]))
-        approxValues = IndexedRowMatrix(useful_dataRDD.map(lambda (ind,vec) : IndexedRow(ind, transformer(vec, testdatabounds, bc_EdgeMeans, bc_newg, kb)) ))
+        approxValues = IndexedRowMatrix(useful_dataRDD.map(lambda (ind,vec) : IndexedRow(ind, transformer(vec, dataBounds, bc_EdgeMeans, bc_newg, kb)) ))
         sumofSquares = approxValues.rows.flatMap(lambda  irow: [(i,x) for i,x in enumerate(irow.vector.toArray()**2)]).reduceByKey(lambda a,b: a+b).map(lambda (a,b): (a,b)).collect()
         sos = self.sc.broadcast(np.array(sorted(sumofSquares, key = lambda x: x[0]))[:,1])
         norm_approxValues = IndexedRowMatrix(approxValues.rows.map(lambda irow: IndexedRow(irow.index,np.divide(np.array(irow.vector, dtype = 'float32'), np.array(sos.value, dtype = 'float32')))))
-        testfunctions = self.solver(norm_approxValues)
-        testfunctions = testfunctions.map(lambda (ind,val):(ind,mlvec.dense([val]))).toDF(schema = ("idd","features"))
-        labels =self.gmodel.transform(testfunctions)
-        #relabelDict ={currentLabel[0]:newLabel  for newLabel,currentLabel in enumerate(sorted(self.centroids,key = lambda x : x[1]))}
-        #predicted = labels.select(["idd","prediction"]).rdd.map(lambda row: (row.idd, relabelDict[row.prediction]))
-        predicted = self.relabel(labels)
-        return predicted
+        self.tinterpolated = norm_approxValues
+        self.talpha = self.getAlpha(norm_approxValues, y, newn, self.newsig)
+        efunctions = self.solver(norm_approxValues, self.talpha)
+        efunctions = efunctions.map(lambda (ind,val):(ind,mlvec.dense([val]))).toDF(schema = ("idd","features"))
+        kmeans = kmml(featuresCol="features",predictionCol="prediction", k= self.numClasses, initMode="k-means||",initSteps=10, tol=1e-4, maxIter=2000, seed=0)
+        kmodel = kmeans.fit(efunctions)
+        labeled=kmodel.transform(efunctions)
+        predicted = self.relabel(labeled, kmodel)
+        return predicted.filter(lambda (i,v): i < (newn - lpoints))
